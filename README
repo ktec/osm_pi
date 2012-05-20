@@ -1,0 +1,30 @@
+Open Sea Map Plugin for OpenCPN
+=======================================
+
+The purpose of this plugin is to provide a connection between Open Sea Map and OpenCPN. 
+
+The aims are to:
+
+1. View seamarks
+2. Caching - and refresh cache
+3. And finally full crud operations - Create/Read/Update/Delete
+
+
+Compiling
+=========
+You have to be able to compile OpenCPN itself - Get the info at http://opencpn.org/ocpn/developers_manual
+
+* go to the plugin subdirectory in your OpenCPN source tree
+* git clone git://github.com/ktec/osm_pi.git
+
+Build as normally:
+
+* cd ..
+* cd build
+* cmake ..
+* cmake --build .
+
+License
+=======
+The plugin is licensed under the terms of GPL v2 or, at your will, later.
+Some of icons used come from Pastel SVG icon set (http://codefisher.org/pastel-svg/), created by Michael Buckley is licensed under the Creative Commons Attribution-Share Alike 3.0 Unported (http://creativecommons.org/licenses/by-sa/3.0/)
