@@ -95,7 +95,7 @@ int osm_pi::Init(void)
       m_pconfig = GetOCPNConfigObject();
 
       //    And load the configuration items
-      LoadConfig();
+//      LoadConfig();
 
       //      Establish the location of the config file
       wxString dbpath;
@@ -142,7 +142,7 @@ bool osm_pi::DeInit(void)
             delete m_pOsmDialog;
             m_pOsmDialog = NULL;
       }
-      SaveConfig();
+//      SaveConfig();
       return true;
 }
 

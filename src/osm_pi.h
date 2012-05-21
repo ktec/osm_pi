@@ -87,7 +87,7 @@ public:
       void SetColorScheme(PI_ColorScheme cs);
 
 //    The override PlugIn Methods
-      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
+//      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
       //bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
 //    Other public methods
@@ -100,8 +100,8 @@ private:
 
       wxFileConfig     *m_pconfig;
       wxWindow         *m_parent_window;
-      bool              LoadConfig(void);
-      bool              SaveConfig(void);
+//      bool              LoadConfig(void);
+//      bool              SaveConfig(void);
 
       double            m_lat, m_lon;
       wxDateTime        m_lastPosReport;
