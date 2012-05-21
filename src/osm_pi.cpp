@@ -83,8 +83,8 @@ int osm_pi::Init(void)
       AddLocaleCatalog( _T("opencpn-osm_pi") );
 
       // Set some default private member parameters
-      m_survey_dialog_x = 0;
-      m_survey_dialog_y = 0;
+      m_osm_dialog_x = 0;
+      m_osm_dialog_y = 0;
 
       ::wxDisplaySize(&m_display_width, &m_display_height);
 
@@ -110,22 +110,6 @@ int osm_pi::Init(void)
       pHome_Locn.Append(std_path.GetUserConfigDir());
 #endif
       appendOSDirSlash(&pHome_Locn) ;
-#ifdef __WXMSW__
-      dbpath = _T(DATABASE_NAME);
-      dbpath.Prepend(pHome_Locn);
-
-#elif defined __WXOSX__
-      dbpath = std_path.GetUserConfigDir(); // should be ~/Library/Preferences
-      appendOSDirSlash(&dbpath) ;
-      dbpath.Append(_T(DATABASE_NAME));
-#else
-      dbpath = std_path.GetUserDataDir(); // should be ~/.opencpn
-      appendOSDirSlash(&dbpath) ;
-      dbpath.Append(_T(DATABASE_NAME));
-#endif
-      
-      bool newDB = !wxFileExists(dbpath);
-      b_dbUsable = true;
 
       //    This PlugIn needs a toolbar icon, so request its insertion
       m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, wxITEM_NORMAL,
@@ -222,6 +206,15 @@ void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 {
 }
 
-void survey_pi::OnToolbarToolCallback(int id)
+void osm_pi::OnToolbarToolCallback(int id)
 {
+      if(NULL == m_pOsmDialog)
+      {
+            m_pOsmDialog = new OsmDlg(m_parent_window);
+            m_pOsmDialog->plugin = this;
+            m_pOsmDialog->Move(wxPoint(m_osm_dialog_x, m_osm_dialog_y));
+      }
+
+      m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
 }
+

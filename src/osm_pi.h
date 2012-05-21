@@ -45,14 +45,11 @@
 #define     MY_API_VERSION_MAJOR    1
 #define     MY_API_VERSION_MINOR    8
 
-#define METERS  1
-#define FEET    2
-#define FATHOMS 3
-
 //World Mercator
 #define PROJECTION 3395
 
 #include "../../../include/ocpn_plugin.h"
+#include "osmgui_impl.h"
 
 class OsmDlg;
 
@@ -110,15 +107,16 @@ private:
       wxDateTime        m_lastPosReport;
 
       bool PointInLLBox(PlugIn_ViewPort *vp, double x, double y);
-      void DrawSounding(wxDC &dc, int x, int y, double depth, long sounding_id, long survey_id);
 
-      OsmDlg        *m_pOsmDialog;
+      OsmDlg            *m_pOsmDialog;
 
       int               m_osm_dialog_x, m_osm_dialog_y;
       int               m_display_width, m_display_height;
       bool              m_bRenderOverlay;
       int               m_iOpacity;
       int               m_iUnits;
+
+      int               m_leftclick_tool_id;
 
       int               dbGetIntNotNullValue(wxString sql);
       wxString          dbGetStringValue(wxString sql);
