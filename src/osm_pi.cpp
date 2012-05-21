@@ -204,6 +204,11 @@ void osm_pi::SetColorScheme(PI_ColorScheme cs)
 
 void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 {
+      OsmCfgDlg *dialog = new OsmCfgDlg( parent, wxID_ANY, _("OSM Preferences"), wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxDefaultSize, wxDEFAULT_DIALOG_STYLE );
+      dialog->Fit();
+      wxColour cl;
+      DimeWindow(dialog);
+      delete dialog;
 }
 
 void osm_pi::OnToolbarToolCallback(int id)
