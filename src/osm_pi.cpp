@@ -230,7 +230,7 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
       if (m_bshuttingDown)
             return;
 
-      wxLogMessage (_T("OSM_PI: SetCurrentViewPort %d,%d,%d,%d\n"),vp.lat_max, vp.lat_min, vp.lon_max, vp.lon_min);
+      wxLogMessage (_T("OSM_PI: SetCurrentViewPort %f,%f,%f,%f\n"),vp.lat_max, vp.lat_min, vp.lon_max, vp.lon_min);
       
       // vp.clat, vp.clon, , vp.rotation
       // m_pgecomapi_window->SetViewPort();
