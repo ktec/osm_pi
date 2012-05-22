@@ -79,12 +79,12 @@ public:
 
 //    The required override PlugIn Methods
       int GetToolbarToolCount(void);
-      void ShowPreferencesDialog( wxWindow* parent );
-
       void OnToolbarToolCallback(int id);
 
 //    Optional plugin overrides
       void SetColorScheme(PI_ColorScheme cs);
+      void SetCurrentViewPort(PlugIn_ViewPort &vp);
+      void ShowPreferencesDialog( wxWindow* parent );
 
 //    The override PlugIn Methods
 //      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
@@ -94,6 +94,7 @@ public:
       void SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
       void SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
 
+      void SetCursorLatLon(double lat, double lon);
       void OnOsmDialogClose();
 
 private:
@@ -120,6 +121,10 @@ private:
 
       int               dbGetIntNotNullValue(wxString sql);
       wxString          dbGetStringValue(wxString sql);
+      bool              m_bshuttingDown;
+
+      short             mPriPosition;
+      PlugIn_ViewPort   m_pastVp;
 };
 
 #endif

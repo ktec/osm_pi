@@ -78,6 +78,7 @@ osm_pi::osm_pi(void *ppimgr)
 
 int osm_pi::Init(void)
 {
+      m_bshuttingDown = false;
       m_lat = 999.0;
       m_lon = 999.0;
       AddLocaleCatalog( _T("opencpn-osm_pi") );
@@ -120,6 +121,7 @@ int osm_pi::Init(void)
 
       return (WANTS_TOOLBAR_CALLBACK    |
               INSTALLS_TOOLBAR_TOOL     |
+              WANTS_CURSOR_LATLON       |
               WANTS_PREFERENCES         |
               WANTS_OVERLAY_CALLBACK    |
               WANTS_ONPAINT_VIEWPORT    |
@@ -131,7 +133,8 @@ int osm_pi::Init(void)
 
 bool osm_pi::DeInit(void)
 {
-      //    Record the dialog position
+      m_bshuttingDown = true;
+     //    Record the dialog position
       if (NULL != m_pOsmDialog)
       {
             wxPoint p = m_pOsmDialog->GetPosition();
@@ -176,7 +179,6 @@ wxString osm_pi::GetCommonName()
       return _("OpenSeaMap");
 }
 
-
 wxString osm_pi::GetShortDescription()
 {
       return _("Osm PlugIn for OpenCPN");
@@ -188,6 +190,12 @@ wxString osm_pi::GetLongDescription()
 database and displays it on the chart.");
 }
 
+void osm_pi::SetCursorLatLon(double lat, double lon)
+{
+      //m_cursor_lon = lon;
+      //m_cursor_lat = lat;
+      //wxLogMessage (_T("OSM_PI: OnToolbarToolCallback %d,%d\n"), lat,lon);
+}
 
 int osm_pi::GetToolbarToolCount(void)
 {
@@ -211,8 +219,27 @@ void osm_pi::ShowPreferencesDialog( wxWindow* parent )
       delete dialog;
 }
 
+void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
+{
+      if (vp.clat == m_pastVp.clat && vp.clon == m_pastVp.clon && vp.pix_height == m_pastVp.pix_height && vp.pix_width == m_pastVp.pix_width && vp.rotation == m_pastVp.rotation && vp.chart_scale == m_pastVp.chart_scale && 
+            vp.lat_max == m_pastVp.lat_max && vp.lat_min == m_pastVp.lat_min && vp.lon_max == m_pastVp.lon_max && vp.lon_min == m_pastVp.lon_min && vp.view_scale_ppm == m_pastVp.view_scale_ppm)
+      {
+            return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
+      }
+      m_pastVp = vp;
+      if (m_bshuttingDown)
+            return;
+
+      wxLogMessage (_T("OSM_PI: SetCurrentViewPort %d,%d,%d,%d\n"),vp.lat_max, vp.lat_min, vp.lon_max, vp.lon_min);
+      
+      // vp.clat, vp.clon, , vp.rotation
+      // m_pgecomapi_window->SetViewPort();
+}
+
 void osm_pi::OnToolbarToolCallback(int id)
 {
+      wxLogMessage (_T("OSM_PI: OnToolbarToolCallback\n"));
+      /*
       if(NULL == m_pOsmDialog)
       {
             m_pOsmDialog = new OsmDlg(m_parent_window);
@@ -221,5 +248,6 @@ void osm_pi::OnToolbarToolCallback(int id)
       }
 
       m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
+      */
 }
 
