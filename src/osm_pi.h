@@ -90,7 +90,7 @@ public:
 
 //    The override PlugIn Methods
 //      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
-      //bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
+//      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
 //    Other public methods
       void SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
@@ -108,8 +108,6 @@ private:
 
       double            m_lat, m_lon;
       wxDateTime        m_lastPosReport;
-
-      bool PointInLLBox(PlugIn_ViewPort *vp, double x, double y);
 
       OsmDlg            *m_pOsmDialog;
 
