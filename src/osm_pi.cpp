@@ -114,7 +114,7 @@ int osm_pi::Init(void)
 
       //    This PlugIn needs a toolbar icon, so request its insertion
       m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, wxITEM_NORMAL,
-            _("Osm"), _T(""), NULL,
+            _("OpenSeaMap"), _T(""), NULL,
              OSM_TOOL_POSITION, 0, this);
 
       m_pOsmDialog = NULL;
