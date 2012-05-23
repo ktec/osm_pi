@@ -232,8 +232,25 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
 
       wxLogMessage (_T("OSM_PI: SetCurrentViewPort \
             wget -O features.xml http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=%f,%f,%f,%f][seamark:type=anchorage|anchor_berth|beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|berth|building|buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|cable_area|cable_submarine|causway|coastguard_station|daymark|fog_signal|gate|harbour|landmark|light|light_major|light_minor|light_float|light_vessel|lock_basin|mooring|navigation_line|notice|pile|pilot_boarding|platform|production_area|radar_reflector|radar_transponder|radar_station|radio_station|recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]"), vp.lon_min, vp.lat_min, vp.lon_max, vp.lat_max);      
-
-      //[seamark:type=anchorage|anchor_berth|beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|berth|building|buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|cable_area|cable_submarine|causway|coastguard_station|daymark|fog_signal|gate|harbour|landmark|light|light_major|light_minor|light_float|light_vessel|lock_basin|mooring|navigation_line|notice|pile|pilot_boarding|platform|production_area|radar_reflector|radar_transponder|radar_station|radio_station|recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
+      /*
+      //[seamark:type=
+      anchorage|anchor_berth|berth|building|
+      beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|
+      buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|
+      cable_area|cable_submarine|causway|coastguard_station|
+      daymark|fog_signal|
+      gate|harbour|landmark|
+      light|light_major|light_minor|light_float|light_vessel|
+      lock_basin|
+      mooring|navigation_line|notice|
+      pile|
+      pilot_boarding|
+      platform|production_area|
+      radar_reflector|radar_transponder|radar_station|radio_station|
+      recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|
+      separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
+      shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
+      */
       // vp.clat, vp.clon, , vp.rotation
       // m_pgecomapi_window->SetViewPort();
 }
