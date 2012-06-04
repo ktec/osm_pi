@@ -38,6 +38,7 @@
 
 #include <wx/fileconf.h>
 #include <wx/hashmap.h>
+#include <map>
 
 #include "tinyxml.h"
 
@@ -52,6 +53,7 @@
 
 #include "../../../include/ocpn_plugin.h"
 #include "osmgui_impl.h"
+#include <wx/event.h>
 
 class OsmDlg;
 
@@ -60,6 +62,8 @@ class OsmDlg;
 //----------------------------------------------------------------------------------------------------------
 
 #define OSM_TOOL_POSITION    -1          // Request default positioning of toolbar tool
+WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
+//WX_DEFINE_ARRAY(double, NodeRefList);
 
 class osm_pi : public opencpn_plugin_18
 {
@@ -99,6 +103,10 @@ public:
       void SetCursorLatLon(double lat, double lon);
       void OnOsmDialogClose();
 
+protected:
+      void DownloadUrl(wxString url);
+
+
 private:
 
       wxFileConfig     *m_pconfig;
@@ -125,6 +133,11 @@ private:
 
       short             mPriPosition;
       PlugIn_ViewPort   m_pastVp;
+      wxString          m_overpass_url;
+      void		ParseOsm(TiXmlElement *osm);
+      TagList		ParseTags(TiXmlElement *osm);
+      int		InsertNode(int id, double lat, double lon, TagList tags);
+      int		InsertWay(int id, double lat, double lon, TagList tags);
 };
 
 #endif

@@ -34,6 +34,9 @@
 
 #include <wx/stdpaths.h>
 #include "osm_pi.h"
+#define CURL_STATICLIB
+#include <curl/curl.h>
+#include <curl/easy.h>
 
 // the class factories, used to create and destroy instances of the PlugIn
 
@@ -53,6 +56,14 @@ void appendOSDirSlash(wxString* pString)
       if (pString->Last() != sep)
             pString->Append(sep);
 }
+
+// write downloaded data
+size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written;
+    written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+ 
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -78,9 +89,11 @@ osm_pi::osm_pi(void *ppimgr)
 
 int osm_pi::Init(void)
 {
+
       m_bshuttingDown = false;
       m_lat = 999.0;
       m_lon = 999.0;
+
       AddLocaleCatalog( _T("opencpn-osm_pi") );
 
       // Set some default private member parameters
@@ -145,6 +158,7 @@ bool osm_pi::DeInit(void)
             delete m_pOsmDialog;
             m_pOsmDialog = NULL;
       }
+
 //      SaveConfig();
       return true;
 }
@@ -221,17 +235,18 @@ void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 
 void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
 {
+      if (m_bshuttingDown)
+            return;
       if (vp.clat == m_pastVp.clat && vp.clon == m_pastVp.clon && vp.pix_height == m_pastVp.pix_height && vp.pix_width == m_pastVp.pix_width && vp.rotation == m_pastVp.rotation && vp.chart_scale == m_pastVp.chart_scale && 
             vp.lat_max == m_pastVp.lat_max && vp.lat_min == m_pastVp.lat_min && vp.lon_max == m_pastVp.lon_max && vp.lon_min == m_pastVp.lon_min && vp.view_scale_ppm == m_pastVp.view_scale_ppm)
       {
             return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
       }
       m_pastVp = vp;
-      if (m_bshuttingDown)
-            return;
+      m_overpass_url = wxString::Format(wxT("http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]"), 
+            (float)m_pastVp.lon_min, (float)m_pastVp.lat_min, (float)m_pastVp.lon_max, (float)m_pastVp.lat_max);
+      wxLogMessage (_T("OSM_PI: SetCurrentViewPort overpass_url = [%s]"), m_overpass_url.c_str());
 
-      wxLogMessage (_T("OSM_PI: SetCurrentViewPort \
-            wget -O features.xml http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=%f,%f,%f,%f][seamark:type=anchorage|anchor_berth|beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|berth|building|buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|cable_area|cable_submarine|causway|coastguard_station|daymark|fog_signal|gate|harbour|landmark|light|light_major|light_minor|light_float|light_vessel|lock_basin|mooring|navigation_line|notice|pile|pilot_boarding|platform|production_area|radar_reflector|radar_transponder|radar_station|radio_station|recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]"), vp.lon_min, vp.lat_min, vp.lon_max, vp.lat_max);      
       /*
       //[seamark:type=
       anchorage|anchor_berth|berth|building|
@@ -251,22 +266,187 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
       separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
       shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
       */
-      // vp.clat, vp.clon, , vp.rotation
-      // m_pgecomapi_window->SetViewPort();
 }
 
 void osm_pi::OnToolbarToolCallback(int id)
 {
       wxLogMessage (_T("OSM_PI: OnToolbarToolCallback\n"));
-      /*
+      /* OSM Dialog (here we can select what types of objects to show)
       if(NULL == m_pOsmDialog)
       {
             m_pOsmDialog = new OsmDlg(m_parent_window);
             m_pOsmDialog->plugin = this;
             m_pOsmDialog->Move(wxPoint(m_osm_dialog_x, m_osm_dialog_y));
       }
-
       m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
       */
+      DownloadUrl(m_overpass_url);
 }
+
+void osm_pi::DownloadUrl(wxString url)
+{
+    wxLogMessage (_T("OSM_PI: DownloadUrl [%s]"), url.c_str());
+
+    CURL *curl;
+    FILE *fp;
+    CURLcode res;
+    char outfilename[FILENAME_MAX] = "/tmp/features.xml";
+    curl = curl_easy_init();
+    if (curl) {
+        fp = fopen(outfilename,"wb");
+        curl_easy_setopt(curl, CURLOPT_URL, url.mb_str().data() );
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        fclose(fp);
+    }
+
+	if(res == CURLE_OK)
+	{
+		TiXmlDocument doc( "/tmp/features.xml" );
+		bool loadOkay = doc.LoadFile();
+		if (loadOkay)
+		{
+			ParseOsm(doc.FirstChildElement());
+		}
+		else
+		{
+			wxLogMessage (_T("OSM_PI: Failed to load file: %s"), "/tmp/features.xml");
+		}
+		// cannot enter here in debug mode
+		wxLogMessage (_T("OSM_PI: Sweet!! Just downloaded this file: [%s]"), url.c_str());
+	}
+	else
+	{
+		//wxString m_errorString = wxT(curl_easy_strerror(res));
+		//wxMessageBox(m_errorString);
+		//wxLogMessage (_T("OSM_PI: Dang!! Couldnt download url because %s : [%s]"), m_errorString.c_str(), url.c_str());
+	}
+}
+
+void osm_pi::ParseOsm(TiXmlElement *osm)
+{
+    TiXmlElement *el = osm->FirstChildElement();
+    while (el)
+    {
+        wxString el_name = wxString::FromUTF8(el->Value());
+        //wxLogMessage (_T("OSM_PI: ParseOsm [%s]"), el_name.c_str());
+        if (el_name == _T("node"))
+        {
+            int node_id = atoi(el->Attribute("id"));
+            float lat = atof(el->Attribute("lat"));
+            float lon = atof(el->Attribute("lon"));
+            TagList tags = ParseTags(el);
+            InsertNode(node_id, lat, lon, tags);
+        }
+        else if (el_name == _T("way"))
+        {
+            int way_id = atoi(el->Attribute("id"));
+            float lat = atof(el->Attribute("lat"));
+            float lon = atof(el->Attribute("lon"));
+            TagList tags = ParseTags(el);
+            InsertWay(way_id, lat, lon, tags);
+        }
+        el = el->NextSiblingElement();
+    }
+}
+
+TagList osm_pi::ParseTags(TiXmlElement *osm)
+{
+	TagList tags;
+	TiXmlElement *el = osm->FirstChildElement();
+	while (el)
+	{
+		wxString el_name = wxString::FromUTF8(el->Value());
+		if (el_name == _T("tag"))
+		{
+			wxString key = wxString::FromUTF8(el->Attribute("k"));
+			wxString value = wxString::FromUTF8(el->Attribute("v"));
+			tags[key] = value;
+		}
+		el = el->NextSiblingElement();
+	}
+	return tags;
+}
+/*
+NodeRefList osm_pi::ParseNodeRefs(TiXmlElement *osm)
+{
+	NodeRefList nodelist;
+	TiXmlElement *el = osm->FirstChildElement();
+	while (el)
+	{
+		wxString el_name = wxString::FromUTF8(el->Value());
+		if (el_name == _T("nd"))
+		{
+			wxString ref = wxString::FromUTF8(el->Attribute("ref"));
+			nodelist[nodelist->GetCount()] = value;
+		}
+		el = el->NextSiblingElement();
+	}
+	return nodelist;
+}*/
+
+int osm_pi::InsertNode(int id, double lat, double lon, TagList tags)
+{
+	wxLogMessage (_T("OSM_PI: InsertNode [%i, %f, %f]"), id, (float)lat, (float)lon);
+	// iterate over all the tags
+	TagList::iterator it;
+	for( it = tags.begin(); it != tags.end(); ++it )
+	{
+		wxString key = it->first, value = it->second;
+		wxLogMessage (_T("OSM_PI: InsertNodeTags [%s, %s]"), key.c_str(), value.c_str());
+	}
+	// insert in the database
+	return 0;
+}
+
+int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
+{
+	wxLogMessage (_T("OSM_PI: InsertWay [%i, %f, %f]"), id, (float)lat, (float)lon);
+	// iterate over all the tags
+	TagList::iterator it;
+	for( it = tags.begin(); it != tags.end(); ++it )
+	{
+		wxString key = it->first, value = it->second;
+		wxLogMessage (_T("OSM_PI: InsertWayTags [%s, %s]"), key.c_str(), value.c_str());
+	}
+	// insert in the database
+	return 0;
+}
+
+/*
+void osm_pi::ParseOsm(TiXmlElement *osm)
+{
+      TiXmlElement *parameter = osm->FirstChildElement();
+      while (parameter)
+      {
+            wxString paramname = wxString::FromUTF8(parameter->Value());
+            else if (paramname == _T("way"))
+            {
+//				  <way id="112284730">
+//					<nd ref="1276680173"/>
+//					<nd ref="1276680131"/>
+//					<nd ref="1276680154"/>
+//					<tag k="seamark:type" v="separation_line"/>
+//				  </way>
+            }
+            else if (paramname == _T("relation"))
+            {
+                  //TODO: We do not need this, so let's ignore it for now
+            }
+            parameter = parameter->NextSiblingElement();
+      }
+}
+
+int osm_pi::InsertWayTag(int way_id, wxString k, wxString v)
+{
+	wxLogMessage (_T("OSM_PI: InsertWayTag [%i, %d, %d]"), way_id, k, v);
+	// add the tag to the database
+	return 0
+}
+
+*/
+
+
 

@@ -24,6 +24,11 @@ Build as normally:
 * cmake ..
 * cmake --build .
 
+Requires
+========
+
+libcurl - http://curl.haxx.se/docs/install.html
+
 License
 =======
 The plugin is licensed under the terms of GPL v2 or, at your will, later.
