@@ -22,7 +22,13 @@ MESSAGE (STATUS "*** Building ${PACKAGE_NAME} ***")
 
 #SET(CMAKE_BUILD_TYPE Debug)
 
-INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+INCLUDE_DIRECTORIES(
+    ${CMAKE_SOURCE_DIR}/include 
+    ${CMAKE_SOURCE_DIR}/src 
+    ${CMAKE_SOURCE_DIR}/src/libspatialite-amalgamation-3.0.1/headers 
+    ${CMAKE_SOURCE_DIR}/src/libspatialite-amalgamation-3.0.1/headers/spatialite
+)
+
 
 # require proper c++
 #ADD_DEFINITIONS( "-Wall -ansi -pedantic -Wno-variadic-macros" )
@@ -71,6 +77,8 @@ SET(SRC_OSM
     src/osmgui.cpp
     src/osmgui_impl.cpp
     src/osmgui_impl.h
+    src/libspatialite-amalgamation-3.0.1/spatialite.c
+    src/libspatialite-amalgamation-3.0.1/sqlite3.c
 	)
 
 SET(SRC_TINYXML

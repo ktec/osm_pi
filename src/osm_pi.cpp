@@ -25,6 +25,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
  ***************************************************************************
  */
+#define DATABASE_NAME "osm.sqlite"
 
 #include "wx/wxprec.h"
 
@@ -109,7 +110,7 @@ int osm_pi::Init(void)
       m_pconfig = GetOCPNConfigObject();
 
       //    And load the configuration items
-//      LoadConfig();
+      LoadConfig();
 
       //      Establish the location of the config file
       wxString dbpath;
@@ -124,6 +125,92 @@ int osm_pi::Init(void)
       pHome_Locn.Append(std_path.GetUserConfigDir());
 #endif
       appendOSDirSlash(&pHome_Locn) ;
+#ifdef __WXMSW__
+      dbpath = _T(DATABASE_NAME);
+      dbpath.Prepend(pHome_Locn);
+
+#elif defined __WXOSX__
+      dbpath = std_path.GetUserConfigDir(); // should be ~/Library/Preferences
+      appendOSDirSlash(&dbpath) ;
+      dbpath.Append(_T(DATABASE_NAME));
+#else
+      dbpath = std_path.GetUserDataDir(); // should be ~/.opencpn
+      appendOSDirSlash(&dbpath) ;
+      dbpath.Append(_T(DATABASE_NAME));
+#endif
+      
+      bool newDB = !wxFileExists(dbpath);
+      b_dbUsable = true;
+
+      ret = sqlite3_open_v2 (dbpath.mb_str(), &m_database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+      if (ret != SQLITE_OK)
+      {
+            wxLogMessage (_T("OSM_PI: cannot open '%s': %s\n"), DATABASE_NAME, sqlite3_errmsg (m_database));
+	      sqlite3_close (m_database);
+	      b_dbUsable = false;
+      }
+
+      int db_ver = 1;
+      spatialite_init(0);
+      err_msg = NULL;
+      wxString sql;
+      if (newDB && b_dbUsable)
+      {
+            //create empty db
+            dbQuery(_T("SELECT InitSpatialMetadata()"));
+            //CREATE OUR TABLES
+            sql = _T("CREATE TABLE osm_nodes (")
+                  _T("node_id INTEGER NOT NULL PRIMARY KEY,")
+                  _T("version INTEGER NOT NULL,")
+                  _T("timestamp TEXT,")
+                  _T("uid INTEGER NOT NULL,")
+                  _T("user TEXT,")
+                  _T("changeset INTEGER NOT NULL,")
+                  _T("'Geometry' POINT)");
+            //dbQuery(_T("SELECT AddGeometryColumn('sounding', 'geom', 32632, 'POINT', 2)"));
+            dbQuery(sql);
+
+            sql = _T("CREATE TABLE osm_node_tags (")
+                  _T("node_id INTEGER NOT NULL,")
+                  _T("sub INTEGER NOT NULL,")
+                  _T("k TEXT,")
+                  _T("v TEXT,")
+                  _T("CONSTRAINT pk_osmnodetags PRIMARY KEY (node_id,sub),")
+                  _T("CONSTRAINT fk_osmnodetags PRIMARY KEY (node_id) REFERENCES osm_nodes(node_id))");
+            dbQuery(sql);
+      }
+
+      //Update DB structure and contents
+      if (b_dbUsable)
+      {
+            char **results;
+            int n_rows;
+            int n_columns;
+            sql = _T("SELECT value FROM settings WHERE key = 'DBVersion'");
+            ret = sqlite3_get_table (m_database, sql.mb_str(), &results, &n_rows, &n_columns, &err_msg);
+            if (ret != SQLITE_OK)
+            {
+                  sqlite3_free (err_msg);
+                  sql = _T("CREATE TABLE settings (")
+                  _T("key TEXT NOT NULL UNIQUE,")
+                  _T("value TEXT)");
+                  dbQuery(sql);
+                  dbQuery(_T("INSERT INTO settings (key, value) VALUES ('DBVersion', '1')"));
+                  db_ver = 1;
+            } 
+            else
+            {
+                  db_ver = atoi(results[1]);
+            }
+            sqlite3_free_table (results);
+            wxLogMessage (_T("SURVEY_PI: Database version: %i\n"), db_ver);
+      }
+
+      if (b_dbUsable && db_ver == 2)
+      {
+//            dbQuery(_T("UPDATE settings SET value = 3 WHERE key = 'DBVersion'"));
+//            db_ver = 3;
+      }
 
       //    This PlugIn needs a toolbar icon, so request its insertion
       m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, wxITEM_NORMAL,
@@ -158,8 +245,9 @@ bool osm_pi::DeInit(void)
             delete m_pOsmDialog;
             m_pOsmDialog = NULL;
       }
-
-//      SaveConfig();
+      SaveConfig();
+      sqlite3_close (m_database);
+      spatialite_cleanup();
       return true;
 }
 
@@ -204,6 +292,14 @@ wxString osm_pi::GetLongDescription()
 database and displays it on the chart.");
 }
 
+wxString osm_pi::GetApiUrl()
+{
+//#define API_URL "http://www.overpass-api.de/api/xapi"
+//#define API_URL "http://overpass.osm.rambler.ru/cgi/xapi"
+
+      return _("http://www.overpass-api.de/api/xapi");
+}
+
 void osm_pi::SetCursorLatLon(double lat, double lon)
 {
       //m_cursor_lon = lon;
@@ -224,12 +320,61 @@ void osm_pi::SetColorScheme(PI_ColorScheme cs)
       DimeWindow(m_pOsmDialog);
 }
 
+bool osm_pi::LoadConfig(void)
+{
+      wxFileConfig *pConf = (wxFileConfig *)m_pconfig;
+
+      if(pConf)
+      {
+            pConf->SetPath ( _T( "/Settings/Osm" ) );
+
+//            pConf->Read ( _T ( "Api Url" ),  &m_sApi_url, API_URL );
+
+            m_osm_dialog_x =  pConf->Read ( _T ( "DialogPosX" ), 20L );
+            m_osm_dialog_y =  pConf->Read ( _T ( "DialogPosY" ), 20L );
+
+            if((m_osm_dialog_x < 0) || (m_osm_dialog_x > m_display_width))
+                  m_osm_dialog_x = 5;
+            if((m_osm_dialog_y < 0) || (m_osm_dialog_y > m_display_height))
+                  m_osm_dialog_y = 5;
+            return true;
+      }
+      else
+            return false;
+}
+
+bool osm_pi::SaveConfig(void)
+{
+      wxFileConfig *pConf = (wxFileConfig *)m_pconfig;
+
+      if(pConf)
+      {
+            pConf->SetPath ( _T ( "/Settings/Osm" ) );
+//            pConf->Write ( _T ( "Api Url" ), m_sApi_url );
+
+            pConf->Write ( _T ( "DialogPosX" ),   m_osm_dialog_x );
+            pConf->Write ( _T ( "DialogPosY" ),   m_osm_dialog_y );
+
+            return true;
+      }
+      else
+            return false;
+}
+
 void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 {
       OsmCfgDlg *dialog = new OsmCfgDlg( parent, wxID_ANY, _("OSM Preferences"), wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxDefaultSize, wxDEFAULT_DIALOG_STYLE );
       dialog->Fit();
       wxColour cl;
       DimeWindow(dialog);
+//      dialog->m_tApi_url->SetValue(wxString::Format(wxT("%s"), m_sApi_url));
+
+      if(dialog->ShowModal() == wxID_OK)
+      {
+//            m_sApi_url = dialog->m_cpApi_url->GetUrl().GetAsString();
+            SaveConfig();
+      }
+      
       delete dialog;
 }
 
@@ -243,7 +388,7 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
             return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
       }
       m_pastVp = vp;
-      m_overpass_url = wxString::Format(wxT("http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]"), 
+      m_overpass_url = wxString::Format(wxT("%s?*[bbox=[%f,%f,%f,%f][seamark:type=*]"), GetApiUrl().c_str(),
             (float)m_pastVp.lon_min, (float)m_pastVp.lat_min, (float)m_pastVp.lon_max, (float)m_pastVp.lat_max);
       wxLogMessage (_T("OSM_PI: SetCurrentViewPort overpass_url = [%s]"), m_overpass_url.c_str());
 
@@ -282,6 +427,119 @@ void osm_pi::OnToolbarToolCallback(int id)
       */
       DownloadUrl(m_overpass_url);
 }
+
+//---------------------------------------------------------------------------------------------------------
+//
+//          Database methods
+//
+//---------------------------------------------------------------------------------------------------------
+
+bool osm_pi::dbQuery(wxString sql)
+{
+      if (!b_dbUsable)
+            return false;
+      ret = sqlite3_exec (m_database, sql.mb_str(), NULL, NULL, &err_msg);
+      if (ret != SQLITE_OK)
+      {
+            // some error occurred
+            wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
+	      sqlite3_free (err_msg);
+            b_dbUsable = false;
+      }
+      return b_dbUsable;
+}
+
+void osm_pi::dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns)
+{
+      ret = sqlite3_get_table (m_database, sql.mb_str(), results, &n_rows, &n_columns, &err_msg);
+      if (ret != SQLITE_OK)
+      {
+            wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
+	      sqlite3_free (err_msg);
+            b_dbUsable = false;
+      } 
+}
+
+wxString osm_pi::dbGetStringValue(wxString sql)
+{
+      char **result;
+      int n_rows;
+      int n_columns;
+      dbGetTable(sql, &result, n_rows, n_columns);
+      wxArrayString surveys;
+      wxString ret = wxString::FromUTF8(result[1]);
+      dbFreeResults(result);
+      if(n_rows == 1)
+            return ret;
+      else
+            return wxEmptyString;
+}
+
+int osm_pi::dbGetIntNotNullValue(wxString sql)
+{
+      char **result;
+      int n_rows;
+      int n_columns;
+      dbGetTable(sql, &result, n_rows, n_columns);
+      wxArrayString surveys;
+      int ret = atoi(result[1]);
+      dbFreeResults(result);
+      if(n_rows == 1)
+            return ret;
+      else
+            return 0;
+}
+
+void osm_pi::dbFreeResults(char **results)
+{
+      sqlite3_free_table (results);
+}
+
+int osm_pi::InsertNode(int id, double lat, double lon, TagList tags)
+{
+    //wxString time = _T("current_timestamp");
+    //if (timestamp > 0)
+    //      time = wxDateTime(timestamp).FormatISODate().Append(_T(" ")).Append(wxDateTime(timestamp).FormatISOTime());
+    //wxString sql = wxString::Format(_T("INSERT INTO \"osm_nodes\" (\"version\", \"timestamp\", \"uid\", \"user\", \"changeset\", \"Geometry\",) VALUES (%f , %s, %i, %f, GeomFromText('POINT(%f %f)', %i))"), version, time.c_str(), uid, user, changeset, lon, lat, projection);
+    //dbQuery (sql);
+    //return sqlite3_last_insert_rowid(m_database);
+
+	wxLogMessage (_T("OSM_PI: InsertNode [%i, %f, %f]"), id, (float)lat, (float)lon);
+	// iterate over all the tags
+	TagList::iterator it;
+	for( it = tags.begin(); it != tags.end(); ++it )
+	{
+        //wxString sql = wxString::Format(_T("INSERT INTO \"osm_node_tags\" (\"node_id\", \"sub\", \"k\", \"v\") VALUES (%i , %s, %s, %s))"), node_id, sub, k, v);
+        //dbQuery (sql);
+        //return sqlite3_last_insert_rowid(m_database);
+		wxString key = it->first, value = it->second;
+		wxLogMessage (_T("OSM_PI: InsertNodeTags [%s, %s]"), key.c_str(), value.c_str());
+	}
+	// insert in the database
+	return 0;
+}
+
+int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
+{
+	wxLogMessage (_T("OSM_PI: InsertWay [%i, %f, %f]"), id, (float)lat, (float)lon);
+	// iterate over all the tags
+	TagList::iterator it;
+	for( it = tags.begin(); it != tags.end(); ++it )
+	{
+		wxString key = it->first, value = it->second;
+		wxLogMessage (_T("OSM_PI: InsertWayTags [%s, %s]"), key.c_str(), value.c_str());
+	}
+	// insert in the database
+	return 0;
+}
+
+
+
+//---------------------------------------------------------------------------------------------------------
+//
+//          Overpass/OSM methods
+//
+//---------------------------------------------------------------------------------------------------------
 
 void osm_pi::DownloadUrl(wxString url)
 {
@@ -386,34 +644,6 @@ NodeRefList osm_pi::ParseNodeRefs(TiXmlElement *osm)
 	}
 	return nodelist;
 }*/
-
-int osm_pi::InsertNode(int id, double lat, double lon, TagList tags)
-{
-	wxLogMessage (_T("OSM_PI: InsertNode [%i, %f, %f]"), id, (float)lat, (float)lon);
-	// iterate over all the tags
-	TagList::iterator it;
-	for( it = tags.begin(); it != tags.end(); ++it )
-	{
-		wxString key = it->first, value = it->second;
-		wxLogMessage (_T("OSM_PI: InsertNodeTags [%s, %s]"), key.c_str(), value.c_str());
-	}
-	// insert in the database
-	return 0;
-}
-
-int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
-{
-	wxLogMessage (_T("OSM_PI: InsertWay [%i, %f, %f]"), id, (float)lat, (float)lon);
-	// iterate over all the tags
-	TagList::iterator it;
-	for( it = tags.begin(); it != tags.end(); ++it )
-	{
-		wxString key = it->first, value = it->second;
-		wxLogMessage (_T("OSM_PI: InsertWayTags [%s, %s]"), key.c_str(), value.c_str());
-	}
-	// insert in the database
-	return 0;
-}
 
 /*
 void osm_pi::ParseOsm(TiXmlElement *osm)

@@ -38,6 +38,7 @@
 
 #include <wx/fileconf.h>
 #include <wx/hashmap.h>
+#include <wx/event.h>
 #include <map>
 
 #include "tinyxml.h"
@@ -53,7 +54,8 @@
 
 #include "../../../include/ocpn_plugin.h"
 #include "osmgui_impl.h"
-#include <wx/event.h>
+#include "libspatialite-amalgamation-3.0.1/headers/spatialite/sqlite3.h"
+#include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
 
 class OsmDlg;
 
@@ -82,6 +84,7 @@ public:
       wxString GetCommonName();
       wxString GetShortDescription();
       wxString GetLongDescription();
+      wxString GetApiUrl();
 
 //    The required override PlugIn Methods
       int GetToolbarToolCount(void);
@@ -109,10 +112,16 @@ protected:
 
 private:
 
+      sqlite3          *m_database;
+      sqlite3_stmt     *m_stmt;
+      int               ret;
+      char             *err_msg;
+      bool              b_dbUsable;
+
       wxFileConfig     *m_pconfig;
       wxWindow         *m_parent_window;
-//      bool              LoadConfig(void);
-//      bool              SaveConfig(void);
+      bool              LoadConfig(void);
+      bool              SaveConfig(void);
 
       double            m_lat, m_lon;
       wxDateTime        m_lastPosReport;
@@ -127,13 +136,16 @@ private:
 
       int               m_leftclick_tool_id;
 
-      int               dbGetIntNotNullValue(wxString sql);
-      wxString          dbGetStringValue(wxString sql);
       bool              m_bshuttingDown;
 
       short             mPriPosition;
       PlugIn_ViewPort   m_pastVp;
       wxString          m_overpass_url;
+      bool              dbQuery(wxString sql);
+      void              dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns);
+      void              dbFreeResults(char **results);
+      int               dbGetIntNotNullValue(wxString sql);
+      wxString          dbGetStringValue(wxString sql);
       void		ParseOsm(TiXmlElement *osm);
       TagList		ParseTags(TiXmlElement *osm);
       int		InsertNode(int id, double lat, double lon, TagList tags);
