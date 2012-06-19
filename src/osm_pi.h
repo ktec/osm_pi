@@ -84,7 +84,7 @@ public:
       wxString GetCommonName();
       wxString GetShortDescription();
       wxString GetLongDescription();
-      wxString GetApiUrl();
+      wxString GetApiUrl(float lon_min, float lat_min, float lon_max, float lat_max);
 
 //    The required override PlugIn Methods
       int GetToolbarToolCount(void);
@@ -100,14 +100,14 @@ public:
 //      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
 //    Other public methods
-      void SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
-      void SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
+      void              SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
+      void              SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
 
-      void SetCursorLatLon(double lat, double lon);
-      void OnOsmDialogClose();
+      void              SetCursorLatLon(double lat, double lon);
+      void              OnOsmDialogClose();
 
 protected:
-      void DownloadUrl(wxString url);
+      void              DownloadUrl(wxString url);
 
 
 private:
@@ -140,16 +140,16 @@ private:
 
       short             mPriPosition;
       PlugIn_ViewPort   m_pastVp;
-      wxString          m_overpass_url;
+      wxString          m_api_url;
       bool              dbQuery(wxString sql);
       void              dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns);
       void              dbFreeResults(char **results);
       int               dbGetIntNotNullValue(wxString sql);
       wxString          dbGetStringValue(wxString sql);
-      void		ParseOsm(TiXmlElement *osm);
-      TagList		ParseTags(TiXmlElement *osm);
-      int		InsertNode(int id, double lat, double lon, TagList tags);
-      int		InsertWay(int id, double lat, double lon, TagList tags);
+      void		        ParseOsm(TiXmlElement *osm);
+      TagList		    ParseTags(TiXmlElement *osm);
+      int		        InsertNode(int id, double lat, double lon, TagList tags);
+      int		        InsertWay(int id, double lat, double lon, TagList tags);
 };
 
 #endif

@@ -90,6 +90,10 @@ osm_pi::osm_pi(void *ppimgr)
 
 int osm_pi::Init(void)
 {
+      int db_ver = 1;
+      spatialite_init(0);
+      err_msg = NULL;
+      wxString sql;
 
       m_bshuttingDown = false;
       m_lat = 999.0;
@@ -115,7 +119,7 @@ int osm_pi::Init(void)
       //      Establish the location of the config file
       wxString dbpath;
 
-//      Establish a "home" location
+      //      Establish a "home" location
       wxStandardPathsBase& std_path = wxStandardPaths::Get();
 
       wxString pHome_Locn;
@@ -125,10 +129,10 @@ int osm_pi::Init(void)
       pHome_Locn.Append(std_path.GetUserConfigDir());
 #endif
       appendOSDirSlash(&pHome_Locn) ;
+
 #ifdef __WXMSW__
       dbpath = _T(DATABASE_NAME);
       dbpath.Prepend(pHome_Locn);
-
 #elif defined __WXOSX__
       dbpath = std_path.GetUserConfigDir(); // should be ~/Library/Preferences
       appendOSDirSlash(&dbpath) ;
@@ -142,42 +146,120 @@ int osm_pi::Init(void)
       bool newDB = !wxFileExists(dbpath);
       b_dbUsable = true;
 
-      ret = sqlite3_open_v2 (dbpath.mb_str(), &m_database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+      ret = sqlite3_open_v2 (dbpath.mb_str(), &m_database, 
+                SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
       if (ret != SQLITE_OK)
       {
-            wxLogMessage (_T("OSM_PI: cannot open '%s': %s\n"), DATABASE_NAME, sqlite3_errmsg (m_database));
-	      sqlite3_close (m_database);
-	      b_dbUsable = false;
+        wxLogMessage (_T("OSM_PI: cannot open '%s': %s\n"), 
+                DATABASE_NAME, sqlite3_errmsg (m_database));
+        sqlite3_close (m_database);
+        b_dbUsable = false;
       }
 
-      int db_ver = 1;
-      spatialite_init(0);
-      err_msg = NULL;
-      wxString sql;
       if (newDB && b_dbUsable)
       {
+            // TODO: Check if the database is really empty
+            // TODO: Set the CACHE-SIZE
+            // TODO: Check the GEOMETRY_COLUMNS table      
+
             //create empty db
             dbQuery(_T("SELECT InitSpatialMetadata()"));
+            
             //CREATE OUR TABLES
-            sql = _T("CREATE TABLE osm_nodes (")
-                  _T("node_id INTEGER NOT NULL PRIMARY KEY,")
-                  _T("version INTEGER NOT NULL,")
-                  _T("timestamp TEXT,")
-                  _T("uid INTEGER NOT NULL,")
-                  _T("user TEXT,")
-                  _T("changeset INTEGER NOT NULL,")
-                  _T("'Geometry' POINT)");
-            //dbQuery(_T("SELECT AddGeometryColumn('sounding', 'geom', 32632, 'POINT', 2)"));
+            // creating the OSM "raw" nodes
+            sql = _T("CREATE TABLE osm_nodes (\n")
+                  _T("node_id INTEGER NOT NULL PRIMARY KEY,\n")
+                  _T("version INTEGER,\n")
+                  _T("timestamp TEXT,\n")
+                  _T("uid INTEGER,\n")
+                  _T("user TEXT,\n")
+                  _T("changeset INTEGER,\n")
+                  _T("filtered INTEGER NOT NULL)\n");
+            dbQuery(sql);
+            dbQuery(_T("SELECT AddGeometryColumn('osm_nodes', 'Geometry', 4326, 'POINT', 'XY')"));
+
+            // creating the OSM "raw" node tags
+            sql = _T("CREATE TABLE osm_node_tags (\n")
+                  _T("node_id INTEGER NOT NULL,\n")
+                  _T("sub INTEGER NOT NULL,\n")
+                  _T("k TEXT,\n")
+                  _T("v TEXT,\n")
+                  _T("CONSTRAINT pk_osm_nodetags PRIMARY KEY (node_id, sub),\n")
+                  _T("CONSTRAINT fk_osm_nodetags FOREIGN KEY (node_id) ")
+                  _T("REFERENCES osm_nodes (node_id))\n");
             dbQuery(sql);
 
-            sql = _T("CREATE TABLE osm_node_tags (")
-                  _T("node_id INTEGER NOT NULL,")
-                  _T("sub INTEGER NOT NULL,")
-                  _T("k TEXT,")
-                  _T("v TEXT,")
-                  _T("CONSTRAINT pk_osmnodetags PRIMARY KEY (node_id,sub),")
-                  _T("CONSTRAINT fk_osmnodetags PRIMARY KEY (node_id) REFERENCES osm_nodes(node_id))");
+            // creating the OSM "raw" ways
+            sql = _T("CREATE TABLE osm_ways (\n")
+                  _T("way_id INTEGER NOT NULL PRIMARY KEY,\n")
+                  _T("version INTEGER,\n")
+                  _T("timestamp TEXT,\n")
+                  _T("uid INTEGER,\n")
+                  _T("user TEXT,\n")
+                  _T("filtered INTEGER NOT NULL)\n");
             dbQuery(sql);
+
+            // creating the OSM "raw" way tags
+            sql = _T("CREATE TABLE osm_way_tags (\n")
+                  _T("way_id INTEGER NOT NULL,\n")
+                  _T("sub INTEGER NOT NULL,\n")
+                  _T("k TEXT,\n")
+                  _T("v TEXT,\n")
+                  _T("CONSTRAINT pk_osm_waytags PRIMARY KEY (way_id, sub),\n")
+                  _T("CONSTRAINT fk_osm_waytags FOREIGN KEY (way_id) ")
+                  _T("REFERENCES osm_ways (way_id))\n");
+            dbQuery(sql);
+            
+            // creating the OSM "raw" way-node refs
+            sql = _T("CREATE TABLE osm_way_refs (\n")
+                  _T("way_id INTEGER NOT NULL,\n")
+                  _T("sub INTEGER NOT NULL,\n")
+                  _T("node_id INTEGER NOT NULL,\n")
+                  _T("CONSTRAINT pk_osm_waynoderefs PRIMARY KEY (way_id, sub),\n")
+                  _T("CONSTRAINT fk_osm_waynoderefs FOREIGN KEY (way_id) \n")
+                  _T("REFERENCES osm_ways (way_id))\n");
+            dbQuery(sql);
+            
+            // creating an index supporting osm_way_refs.node_id
+            dbQuery(_T("CREATE INDEX idx_osm_ref_way ON osm_way_refs (node_id)"));
+            
+            // creating the OSM "raw" relations
+            sql = _T("CREATE TABLE osm_relations (\n")
+                  _T("rel_id INTEGER NOT NULL PRIMARY KEY,\n")
+                  _T("version INTEGER,\n")
+                  _T("timestamp TEXT,\n")
+                  _T("uid INTEGER,\n")
+                  _T("user TEXT,\n")
+                  _T("changeset INTEGER,\n")
+                  _T("filtered INTEGER NOT NULL)\n");
+            dbQuery(sql);
+            
+            // creating the OSM "raw" relation tags
+            sql = _T("CREATE TABLE osm_relation_tags (\n")
+                  _T("rel_id INTEGER NOT NULL,\n")
+                  _T("sub INTEGER NOT NULL,\n")
+                  _T("k TEXT,\n")
+                  _T("v TEXT,\n")
+                  _T("CONSTRAINT pk_osm_reltags PRIMARY KEY (rel_id, sub),\n")
+                  _T("CONSTRAINT fk_osm_reltags FOREIGN KEY (rel_id) ")
+                  _T("REFERENCES osm_relations (rel_id))\n");
+            dbQuery(sql);
+            
+            // creating the OSM "raw" relation-node refs
+            sql = _T("CREATE TABLE osm_relation_refs (\n")
+                  _T("rel_id INTEGER NOT NULL,\n")
+                  _T("sub INTEGER NOT NULL,\n")
+                  _T("type TEXT NOT NULL,\n")
+                  _T("ref INTEGER NOT NULL,\n")
+                  _T("role TEXT,")
+                  _T("CONSTRAINT pk_osm_relnoderefs PRIMARY KEY (rel_id, sub),\n")
+                  _T("CONSTRAINT fk_osm_relnoderefs FOREIGN KEY (rel_id) ")
+                  _T("REFERENCES osm_relations (rel_id))\n");
+            dbQuery(sql);
+
+            // creating an index supporting osm_relation_refs.ref
+            dbQuery(_T("CREATE INDEX idx_osm_ref_relation ON osm_relation_refs (type, ref)"));
+
       }
 
       //Update DB structure and contents
@@ -203,19 +285,19 @@ int osm_pi::Init(void)
                   db_ver = atoi(results[1]);
             }
             sqlite3_free_table (results);
-            wxLogMessage (_T("SURVEY_PI: Database version: %i\n"), db_ver);
+            wxLogMessage (_T("OSM_PI: Database version: %i\n"), db_ver);
       }
 
-      if (b_dbUsable && db_ver == 2)
-      {
+//      if (b_dbUsable && db_ver == 2)
+//      {
 //            dbQuery(_T("UPDATE settings SET value = 3 WHERE key = 'DBVersion'"));
 //            db_ver = 3;
-      }
+//      }
 
       //    This PlugIn needs a toolbar icon, so request its insertion
-      m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, wxITEM_NORMAL,
-            _("OpenSeaMap"), _T(""), NULL,
-             OSM_TOOL_POSITION, 0, this);
+      m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, 
+            wxITEM_NORMAL,_("OpenSeaMap"), _T(""), NULL,
+            OSM_TOOL_POSITION, 0, this);
 
       m_pOsmDialog = NULL;
 
@@ -292,12 +374,14 @@ wxString osm_pi::GetLongDescription()
 database and displays it on the chart.");
 }
 
-wxString osm_pi::GetApiUrl()
+wxString osm_pi::GetApiUrl(float lon_min, float lat_min, float lon_max, float lat_max)
 {
-//#define API_URL "http://www.overpass-api.de/api/xapi"
-//#define API_URL "http://overpass.osm.rambler.ru/cgi/xapi"
-
-      return _("http://www.overpass-api.de/api/xapi");
+    wxString url;
+    url = _("http://open.mapquestapi.com/xapi/api/0.6/*[seamark:type=*][bbox=%f,%f,%f,%f]");
+    //url = _("http://www.overpass-api.de/api/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
+    //url = _("http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
+    
+    return wxString::Format(url, lon_min, lat_min, lon_max, lat_max);
 }
 
 void osm_pi::SetCursorLatLon(double lat, double lon)
@@ -388,9 +472,8 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
             return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
       }
       m_pastVp = vp;
-      m_overpass_url = wxString::Format(wxT("%s?*[bbox=[%f,%f,%f,%f][seamark:type=*]"), GetApiUrl().c_str(),
-            (float)m_pastVp.lon_min, (float)m_pastVp.lat_min, (float)m_pastVp.lon_max, (float)m_pastVp.lat_max);
-      wxLogMessage (_T("OSM_PI: SetCurrentViewPort overpass_url = [%s]"), m_overpass_url.c_str());
+      m_api_url = GetApiUrl(m_pastVp.lon_min, m_pastVp.lat_min, m_pastVp.lon_max, m_pastVp.lat_max);
+      //wxLogMessage (_T("OSM_PI: SetCurrentViewPort api_url = [%s]"), m_api_url.c_str());
 
       /*
       //[seamark:type=
@@ -425,7 +508,7 @@ void osm_pi::OnToolbarToolCallback(int id)
       }
       m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
       */
-      DownloadUrl(m_overpass_url);
+      DownloadUrl(m_api_url);
 }
 
 //---------------------------------------------------------------------------------------------------------
@@ -436,28 +519,28 @@ void osm_pi::OnToolbarToolCallback(int id)
 
 bool osm_pi::dbQuery(wxString sql)
 {
-      if (!b_dbUsable)
-            return false;
-      ret = sqlite3_exec (m_database, sql.mb_str(), NULL, NULL, &err_msg);
-      if (ret != SQLITE_OK)
-      {
-            // some error occurred
-            wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
-	      sqlite3_free (err_msg);
-            b_dbUsable = false;
-      }
-      return b_dbUsable;
+    if (!b_dbUsable)
+        return false;
+    ret = sqlite3_exec (m_database, sql.mb_str(), NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+    {
+        // some error occurred
+        wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
+        sqlite3_free (err_msg);
+        b_dbUsable = false;
+    }
+    return b_dbUsable;
 }
 
 void osm_pi::dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns)
 {
-      ret = sqlite3_get_table (m_database, sql.mb_str(), results, &n_rows, &n_columns, &err_msg);
-      if (ret != SQLITE_OK)
-      {
-            wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
-	      sqlite3_free (err_msg);
-            b_dbUsable = false;
-      } 
+    ret = sqlite3_get_table (m_database, sql.mb_str(), results, &n_rows, &n_columns, &err_msg);
+    if (ret != SQLITE_OK)
+    {
+        wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
+        sqlite3_free (err_msg);
+        b_dbUsable = false;
+    } 
 }
 
 wxString osm_pi::dbGetStringValue(wxString sql)
@@ -544,7 +627,7 @@ int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
 void osm_pi::DownloadUrl(wxString url)
 {
     wxLogMessage (_T("OSM_PI: DownloadUrl [%s]"), url.c_str());
-
+/*
     CURL *curl;
     FILE *fp;
     CURLcode res;
@@ -566,14 +649,13 @@ void osm_pi::DownloadUrl(wxString url)
 		bool loadOkay = doc.LoadFile();
 		if (loadOkay)
 		{
+		    wxLogMessage (_T("OSM_PI: Sweet!! Just downloaded this file: [%s]"), url.c_str());
 			ParseOsm(doc.FirstChildElement());
 		}
 		else
 		{
 			wxLogMessage (_T("OSM_PI: Failed to load file: %s"), "/tmp/features.xml");
 		}
-		// cannot enter here in debug mode
-		wxLogMessage (_T("OSM_PI: Sweet!! Just downloaded this file: [%s]"), url.c_str());
 	}
 	else
 	{
@@ -581,6 +663,7 @@ void osm_pi::DownloadUrl(wxString url)
 		//wxMessageBox(m_errorString);
 		//wxLogMessage (_T("OSM_PI: Dang!! Couldnt download url because %s : [%s]"), m_errorString.c_str(), url.c_str());
 	}
+*/
 }
 
 void osm_pi::ParseOsm(TiXmlElement *osm)
@@ -590,21 +673,22 @@ void osm_pi::ParseOsm(TiXmlElement *osm)
     {
         wxString el_name = wxString::FromUTF8(el->Value());
         //wxLogMessage (_T("OSM_PI: ParseOsm [%s]"), el_name.c_str());
+        int id = atoi(el->Attribute("id"));
+        float lat = atof(el->Attribute("lat"));
+        float lon = atof(el->Attribute("lon"));
+        TagList tags = ParseTags(el);
+
         if (el_name == _T("node"))
         {
-            int node_id = atoi(el->Attribute("id"));
-            float lat = atof(el->Attribute("lat"));
-            float lon = atof(el->Attribute("lon"));
-            TagList tags = ParseTags(el);
-            InsertNode(node_id, lat, lon, tags);
+            InsertNode(id, lat, lon, tags);
         }
         else if (el_name == _T("way"))
         {
-            int way_id = atoi(el->Attribute("id"));
-            float lat = atof(el->Attribute("lat"));
-            float lon = atof(el->Attribute("lon"));
-            TagList tags = ParseTags(el);
-            InsertWay(way_id, lat, lon, tags);
+            //InsertWay(id, lat, lon, tags);
+        }
+        else if (el_name == _T("relation"))
+        {
+            //InsertWay(id, lat, lon, tags);
         }
         el = el->NextSiblingElement();
     }
