@@ -494,6 +494,8 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
       separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
       shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
       */
+      
+      // TODO: Query local database for seamarks
 }
 
 void osm_pi::OnToolbarToolCallback(int id)
@@ -508,6 +510,8 @@ void osm_pi::OnToolbarToolCallback(int id)
       }
       m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
       */
+      // TODO: this needs to show a dialog which allow the user
+      // to update their local database by pressing a button? Maybe?
       DownloadUrl(m_api_url);
 }
 
@@ -524,9 +528,9 @@ bool osm_pi::dbQuery(wxString sql)
     ret = sqlite3_exec (m_database, sql.mb_str(), NULL, NULL, &err_msg);
     if (ret != SQLITE_OK)
     {
+        sqlite3_free (err_msg);
         // some error occurred
         wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
-        sqlite3_free (err_msg);
         b_dbUsable = false;
     }
     return b_dbUsable;
@@ -537,8 +541,8 @@ void osm_pi::dbGetTable(wxString sql, char ***results, int &n_rows, int &n_colum
     ret = sqlite3_get_table (m_database, sql.mb_str(), results, &n_rows, &n_columns, &err_msg);
     if (ret != SQLITE_OK)
     {
-        wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
         sqlite3_free (err_msg);
+        wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
         b_dbUsable = false;
     } 
 }
@@ -549,9 +553,9 @@ wxString osm_pi::dbGetStringValue(wxString sql)
       int n_rows;
       int n_columns;
       dbGetTable(sql, &result, n_rows, n_columns);
+      dbFreeResults(result);
       wxArrayString surveys;
       wxString ret = wxString::FromUTF8(result[1]);
-      dbFreeResults(result);
       if(n_rows == 1)
             return ret;
       else
@@ -564,9 +568,9 @@ int osm_pi::dbGetIntNotNullValue(wxString sql)
       int n_rows;
       int n_columns;
       dbGetTable(sql, &result, n_rows, n_columns);
+      dbFreeResults(result);
       wxArrayString surveys;
       int ret = atoi(result[1]);
-      dbFreeResults(result);
       if(n_rows == 1)
             return ret;
       else
@@ -627,7 +631,6 @@ int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
 void osm_pi::DownloadUrl(wxString url)
 {
     wxLogMessage (_T("OSM_PI: DownloadUrl [%s]"), url.c_str());
-/*
     CURL *curl;
     FILE *fp;
     CURLcode res;
@@ -654,7 +657,7 @@ void osm_pi::DownloadUrl(wxString url)
 		}
 		else
 		{
-			wxLogMessage (_T("OSM_PI: Failed to load file: %s"), "/tmp/features.xml");
+			wxLogMessage (_T("OSM_PI: Failed to load file: /tmp/features.xml"));
 		}
 	}
 	else
@@ -663,7 +666,6 @@ void osm_pi::DownloadUrl(wxString url)
 		//wxMessageBox(m_errorString);
 		//wxLogMessage (_T("OSM_PI: Dang!! Couldnt download url because %s : [%s]"), m_errorString.c_str(), url.c_str());
 	}
-*/
 }
 
 void osm_pi::ParseOsm(TiXmlElement *osm)
@@ -672,23 +674,87 @@ void osm_pi::ParseOsm(TiXmlElement *osm)
     while (el)
     {
         wxString el_name = wxString::FromUTF8(el->Value());
-        //wxLogMessage (_T("OSM_PI: ParseOsm [%s]"), el_name.c_str());
-        int id = atoi(el->Attribute("id"));
-        float lat = atof(el->Attribute("lat"));
-        float lon = atof(el->Attribute("lon"));
-        TagList tags = ParseTags(el);
+        wxLogMessage (_T("OSM_PI: ParseOsm [%s]"), el_name.c_str());
 
-        if (el_name == _T("node"))
+        if (el_name == _T("bounds"))
         {
-            InsertNode(id, lat, lon, tags);
+        }
+        else if (el_name == _T("node"))
+        {
+            int id = atoi(el->Attribute("id"));
+            int version = atoi(el->Attribute("version"));
+            wxString timestamp = wxString::FromUTF8(el->Attribute("timestamp"));
+            int uid = atoi(el->Attribute("uid"));
+            wxString user = wxString::FromUTF8(el->Attribute("user"));
+            int changeset = atoi(el->Attribute("changeset"));
+            float lat = atof(el->Attribute("lat"));
+            float lon = atof(el->Attribute("lon"));
+
+            //InsertNode(id, lat, lon, tags);
+            
+	        wxString sql = _T("INSERT INTO osm_nodes (node_id, version, timestamp, uid, user, changeset, filtered, Geometry) ")
+                           _T("VALUES (%i, %i, '%s', %i, '%s', %i, 0, GeomFromText('POINT(%f %f)',4326))");
+            wxString sql_string = wxString::Format(sql, id, version, timestamp.c_str(), uid, user.c_str(), changeset, lat, lon);
+            wxLogMessage (_T("OSM_PI: %s"), sql_string.c_str());
+            //dbQuery (sql_string);
+
+            err_msg = NULL;
+            ret = sqlite3_exec (m_database, sql_string.mb_str(), NULL, NULL, &err_msg);
+            if (ret != SQLITE_OK)
+            {
+                // some error occurred
+                fprintf(stderr, "SQL error: %s\n", err_msg);
+                sqlite3_free (err_msg);
+            }
+            int node_id = sqlite3_last_insert_rowid(m_database);
+
+            //TagList tags = ParseTags(el);
+            int tag_id = 0;
+	        TiXmlElement *tag_el = el->FirstChildElement();
+	        while (tag_el)
+	        {
+		        wxString tag_el_name = wxString::FromUTF8(tag_el->Value());
+		        if (tag_el_name == _T("tag"))
+		        {
+			        wxString key = wxString::FromUTF8(tag_el->Attribute("k"));
+			        wxString value = wxString::FromUTF8(tag_el->Attribute("v"));
+
+	                wxString sql = _T("INSERT INTO osm_node_tags (node_id, sub, k, v) ")
+                                   _T("VALUES (%i, %i, '%s', '%s')");
+                    wxString sql_string = wxString::Format(sql, node_id, tag_id++, key.c_str(), value.c_str());
+                    wxLogMessage (_T("OSM_PI: %s"), sql_string.c_str());
+
+                    err_msg = NULL;
+                    ret = sqlite3_exec (m_database, sql_string.mb_str(), NULL, NULL, &err_msg);
+                    if (ret != SQLITE_OK)
+                    {
+                        // some error occurred
+                        fprintf(stderr, "SQL error: %s\n", err_msg);
+                        sqlite3_free (err_msg);
+                    }
+		        }
+		        tag_el = tag_el->NextSiblingElement();
+	        }
+
+
         }
         else if (el_name == _T("way"))
         {
+            //int id = atoi(el->Attribute("id"));
+            //float lat = atof(el->Attribute("lat"));
+            //float lon = atof(el->Attribute("lon"));
+            //TagList tags = ParseTags(el);
+
             //InsertWay(id, lat, lon, tags);
         }
         else if (el_name == _T("relation"))
         {
-            //InsertWay(id, lat, lon, tags);
+            //int id = atoi(el->Attribute("id"));
+            //float lat = atof(el->Attribute("lat"));
+            //float lon = atof(el->Attribute("lon"));
+            //TagList tags = ParseTags(el);
+
+            //InsertRelation(id, lat, lon, tags);
         }
         el = el->NextSiblingElement();
     }
