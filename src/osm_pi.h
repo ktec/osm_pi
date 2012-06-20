@@ -36,6 +36,7 @@
   #include <wx/glcanvas.h>
 #endif //precompiled headers
 
+#include <wx/stdpaths.h>
 #include <wx/fileconf.h>
 #include <wx/hashmap.h>
 #include <wx/event.h>
