@@ -634,6 +634,12 @@ void osm_pi::DownloadUrl(wxString url)
 
 	if(res == CURLE_OK)
 	{
+        const char *osm_path = NULL;
+        const void *osm_handle;
+        osm_path = "/tmp/features.xml";
+	    // Download completed ok
+	    ::readosm_open (osm_path, &osm_handle);
+	    /*
 		TiXmlDocument doc( "/tmp/features.xml" );
 		bool loadOkay = doc.LoadFile();
 		if (loadOkay)
@@ -645,6 +651,7 @@ void osm_pi::DownloadUrl(wxString url)
 		{
 			wxLogMessage (_T("OSM_PI: Failed to load file: /tmp/features.xml"));
 		}
+		*/
 	}
 	else
 	{

@@ -79,6 +79,10 @@ SET(SRC_OSM
     src/osmgui_impl.h
     src/libspatialite-amalgamation-3.0.1/spatialite.c
     src/libspatialite-amalgamation-3.0.1/sqlite3.c
+    src/readosm/readosm.c
+    src/readosm/osmxml.c
+    src/readosm/osm_objects.c
+    src/readosm/protobuf.c
 	)
 
 SET(SRC_TINYXML

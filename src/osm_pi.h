@@ -52,8 +52,13 @@
 
 #include "../../../include/ocpn_plugin.h"
 #include "osmgui_impl.h"
+//#include <spatialite/gaiageo.h>
+//#include <spatialite.h>
+//#include <readosm.h>
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite/sqlite3.h"
+#include "libspatialite-amalgamation-3.0.1/headers/spatialite/gaiageo.h"
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
+#include "readosm/readosm.h"
 
 //World Mercator
 #define PROJECTION 3395
