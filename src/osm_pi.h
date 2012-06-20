@@ -49,13 +49,17 @@
 #define     MY_API_VERSION_MAJOR    1
 #define     MY_API_VERSION_MINOR    8
 
-//World Mercator
-#define PROJECTION 3395
-
 #include "../../../include/ocpn_plugin.h"
 #include "osmgui_impl.h"
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite/sqlite3.h"
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
+
+//World Mercator
+#define PROJECTION 3395
+#define DATABASE_NAME "osm.sqlite"
+#define CURL_STATICLIB
+#include <curl/curl.h>
+#include <curl/easy.h>
 
 class OsmDlg;
 

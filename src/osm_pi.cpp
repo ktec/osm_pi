@@ -25,7 +25,6 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
  ***************************************************************************
  */
-#define DATABASE_NAME "osm.sqlite"
 
 #include "wx/wxprec.h"
 
@@ -35,9 +34,6 @@
 
 #include <wx/stdpaths.h>
 #include "osm_pi.h"
-#define CURL_STATICLIB
-#include <curl/curl.h>
-#include <curl/easy.h>
 
 // the class factories, used to create and destroy instances of the PlugIn
 
