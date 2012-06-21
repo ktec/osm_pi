@@ -104,7 +104,7 @@ int osm_pi::Init(void)
     LoadConfig();
 
     //      Establish the location of the config file
-    wxString dbpath;
+    //wxString dbpath; // moved to header
 
     //      Establish a "home" location
     wxStandardPathsBase& std_path = wxStandardPaths::Get();
@@ -118,22 +118,22 @@ int osm_pi::Init(void)
     appendOSDirSlash(&pHome_Locn) ;
 
 #ifdef __WXMSW__
-    dbpath = _T(DATABASE_NAME);
-    dbpath.Prepend(pHome_Locn);
+    m_dbpath = _T(DATABASE_NAME);
+    m_dbpath.Prepend(pHome_Locn);
 #elif defined __WXOSX__
-    dbpath = std_path.GetUserConfigDir(); // should be ~/Library/Preferences
-    appendOSDirSlash(&dbpath) ;
-    dbpath.Append(_T(DATABASE_NAME));
+    m_dbpath = std_path.GetUserConfigDir(); // should be ~/Library/Preferences
+    appendOSDirSlash(&m_dbpath) ;
+    m_dbpath.Append(_T(DATABASE_NAME));
 #else
-    dbpath = std_path.GetUserDataDir(); // should be ~/.opencpn
-    appendOSDirSlash(&dbpath) ;
-    dbpath.Append(_T(DATABASE_NAME));
+    m_dbpath = std_path.GetUserDataDir(); // should be ~/.opencpn
+    appendOSDirSlash(&m_dbpath) ;
+    m_dbpath.Append(_T(DATABASE_NAME));
 #endif
       
-    bool newDB = !wxFileExists(dbpath);
+    bool newDB = !wxFileExists(m_dbpath);
     b_dbUsable = true;
 
-    ret = sqlite3_open_v2 (dbpath.mb_str(), &m_database, 
+    ret = sqlite3_open_v2 (m_dbpath.mb_str(), &m_database, 
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
     if (ret != SQLITE_OK)
     {
@@ -620,7 +620,7 @@ void osm_pi::DownloadUrl(wxString url)
     CURL *curl;
     FILE *fp;
     CURLcode res;
-    char outfilename[FILENAME_MAX] = "/tmp/features.xml";
+    char outfilename[FILENAME_MAX] = "/tmp/features.osm";
     curl = curl_easy_init();
     if (curl) {
         fp = fopen(outfilename,"wb");
@@ -634,11 +634,9 @@ void osm_pi::DownloadUrl(wxString url)
 
 	if(res == CURLE_OK)
 	{
-        const char *osm_path = NULL;
-        const void *osm_handle;
-        osm_path = "/tmp/features.xml";
+        wxLogMessage (_T("OSM_PI: File downloaded"));
 	    // Download completed ok
-	    ::readosm_open (osm_path, &osm_handle);
+	    OnDownloadComplete();
 	    /*
 		TiXmlDocument doc( "/tmp/features.xml" );
 		bool loadOkay = doc.LoadFile();
@@ -660,6 +658,103 @@ void osm_pi::DownloadUrl(wxString url)
 		//wxLogMessage (_T("OSM_PI: Dang!! Couldnt download url because %s : [%s]"), m_errorString.c_str(), url.c_str());
 	}
 }
+
+int osm_pi::OnDownloadComplete()
+{
+    wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
+    //sqlite3 *handle;
+    const char *osm_path = NULL;
+    //const char *db_path = NULL;
+    //int cache_size = 0;
+    //int journal_off = 0;
+    struct aux_params params;
+    const void *osm_handle;
+
+    osm_path = "/tmp/features.osm";
+    //db_path = m_dbpath.mb_str();
+
+/* opening the DB */
+//    open_db (db_path, &handle, cache_size);
+
+/* creating SQL prepared statements */
+//    create_sql_stmts (&params, journal_off);
+
+/* parsing the input OSM-file */
+    if (readosm_open (osm_path, &osm_handle) != READOSM_OK)
+    {
+        wxLogMessage (_T("OSM_PI: Cant open file"));
+        fprintf (stderr, "cannot open %s\n", osm_path);
+//        finalize_sql_stmts (&params);
+//        sqlite3_close (handle);
+        readosm_close (osm_handle);
+        return -1;
+    }
+
+    if (readosm_parse
+	(osm_handle, &params, consume_node, consume_way,
+	    consume_relation) != READOSM_OK)
+    {
+//        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), osm_path);
+        fprintf (stderr, "unrecoverable error while parsing %s\n", osm_path);
+        //	  finalize_sql_stmts (&params);
+        //	  sqlite3_close (handle);
+        //	  readosm_close (osm_handle);
+        return -1;
+	}
+    readosm_close (osm_handle);
+
+/* finalizing SQL prepared statements */
+//    finalize_sql_stmts (&params);
+
+/* printing out statistics */
+/*
+    printf ("inserted %d nodes\n", params.wr_nodes);
+    printf ("\t%d tags\n", params.wr_node_tags);
+    printf ("inserted %d ways\n", params.wr_ways);
+    printf ("\t%d tags\n", params.wr_way_tags);
+    printf ("\t%d node-refs\n", params.wr_way_refs);
+    printf ("inserted %d relations\n", params.wr_relations);
+    printf ("\t%d tags\n", params.wr_rel_tags);
+    printf ("\t%d refs\n", params.wr_rel_refs);
+*/
+
+/* closing the DB connection */
+//    sqlite3_close (handle);
+    return 0;
+}
+
+// OSM Consumers
+int osm_pi::consume_node (const void *user_data, const readosm_node * node)
+{
+    wxLogMessage (_T("OSM_PI: processing an OSM Node (ReadOSM callback function)"));
+/* processing an OSM Node (ReadOSM callback function) */
+//    struct aux_params *params = (struct aux_params *) user_data;
+//    if (!insert_node (params, node))
+//	return READOSM_ABORT;
+    return READOSM_OK;
+}
+
+int osm_pi::consume_way (const void *user_data, const readosm_way * way)
+{
+    wxLogMessage (_T("OSM_PI: processing an OSM Way (ReadOSM callback function)"));
+/* processing an OSM Way (ReadOSM callback function) */
+//    struct aux_params *params = (struct aux_params *) user_data;
+//    if (!insert_way (params, way))
+//	return READOSM_ABORT;
+    return READOSM_OK;
+}
+
+int osm_pi::consume_relation (const void *user_data, const readosm_relation * relation)
+{
+    wxLogMessage (_T("OSM_PI: processing an OSM Relation (ReadOSM callback function)"));
+/* processing an OSM Relation (ReadOSM callback function) */
+//    struct aux_params *params = (struct aux_params *) user_data;
+//    if (!insert_relation (params, relation))
+//	return READOSM_ABORT;
+    return READOSM_OK;
+}
+
+
 
 void osm_pi::ParseOsm(TiXmlElement *osm)
 {

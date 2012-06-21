@@ -80,86 +80,116 @@ WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
 class osm_pi : public opencpn_plugin_18
 {
 public:
-      osm_pi(void *ppimgr);
+    osm_pi(void *ppimgr);
 
-//    The required PlugIn Methods
-      int Init(void);
-      bool DeInit(void);
-      
-      int GetAPIVersionMajor();
-      int GetAPIVersionMinor();
-      int GetPlugInVersionMajor();
-      int GetPlugInVersionMinor();
-      wxBitmap *GetPlugInBitmap();
-      wxString GetCommonName();
-      wxString GetShortDescription();
-      wxString GetLongDescription();
-      wxString GetApiUrl(float lon_min, float lat_min, float lon_max, float lat_max);
+    //    The required PlugIn Methods
+    int Init(void);
+    bool DeInit(void);
 
-//    The required override PlugIn Methods
-      int GetToolbarToolCount(void);
-      void OnToolbarToolCallback(int id);
+    int GetAPIVersionMajor();
+    int GetAPIVersionMinor();
+    int GetPlugInVersionMajor();
+    int GetPlugInVersionMinor();
+    wxBitmap *GetPlugInBitmap();
+    wxString GetCommonName();
+    wxString GetShortDescription();
+    wxString GetLongDescription();
+    wxString GetApiUrl(float lon_min, float lat_min, float lon_max, float lat_max);
 
-//    Optional plugin overrides
-      void SetColorScheme(PI_ColorScheme cs);
-      void SetCurrentViewPort(PlugIn_ViewPort &vp);
-      void ShowPreferencesDialog( wxWindow* parent );
+    //    The required override PlugIn Methods
+    int GetToolbarToolCount(void);
+    void OnToolbarToolCallback(int id);
 
-//    The override PlugIn Methods
-//      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
-//      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
+    //    Optional plugin overrides
+    void SetColorScheme(PI_ColorScheme cs);
+    void SetCurrentViewPort(PlugIn_ViewPort &vp);
+    void ShowPreferencesDialog( wxWindow* parent );
 
-//    Other public methods
-      void              SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
-      void              SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
+    //    The override PlugIn Methods
+    //      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
+    //      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
-      void              SetCursorLatLon(double lat, double lon);
-      void              OnOsmDialogClose();
+    //    Other public methods
+    void              SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
+    void              SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
+
+    void              SetCursorLatLon(double lat, double lon);
+    void              OnOsmDialogClose();
 
 protected:
-      void              DownloadUrl(wxString url);
+    void              DownloadUrl(wxString url);
 
 
 private:
 
-      sqlite3          *m_database;
-      sqlite3_stmt     *m_stmt;
-      int               ret;
-      char             *err_msg;
-      bool              b_dbUsable;
+    sqlite3          *m_database;
+    sqlite3_stmt     *m_stmt;
+    int               ret;
+    char             *err_msg;
+    bool              b_dbUsable;
 
-      wxFileConfig     *m_pconfig;
-      wxWindow         *m_parent_window;
-      bool              LoadConfig(void);
-      bool              SaveConfig(void);
+    wxFileConfig     *m_pconfig;
+    wxWindow         *m_parent_window;
+    bool              LoadConfig(void);
+    bool              SaveConfig(void);
 
-      double            m_lat, m_lon;
-      wxDateTime        m_lastPosReport;
+    double            m_lat, m_lon;
+    wxDateTime        m_lastPosReport;
 
-      OsmDlg            *m_pOsmDialog;
+    OsmDlg            *m_pOsmDialog;
 
-      int               m_osm_dialog_x, m_osm_dialog_y;
-      int               m_display_width, m_display_height;
-      bool              m_bRenderOverlay;
-      int               m_iOpacity;
-      int               m_iUnits;
+    int               m_osm_dialog_x, m_osm_dialog_y;
+    int               m_display_width, m_display_height;
+    bool              m_bRenderOverlay;
+    int               m_iOpacity;
+    int               m_iUnits;
+    wxString          m_dbpath;
 
-      int               m_leftclick_tool_id;
+    int               m_leftclick_tool_id;
 
-      bool              m_bshuttingDown;
+    bool              m_bshuttingDown;
 
-      short             mPriPosition;
-      PlugIn_ViewPort   m_pastVp;
-      wxString          m_api_url;
-      bool              dbQuery(wxString sql);
-      void              dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns);
-      void              dbFreeResults(char **results);
-      int               dbGetIntNotNullValue(wxString sql);
-      wxString          dbGetStringValue(wxString sql);
-      void		        ParseOsm(TiXmlElement *osm);
-      TagList		    ParseTags(TiXmlElement *osm);
-      int		        InsertNode(int id, double lat, double lon, TagList tags);
-      int		        InsertWay(int id, double lat, double lon, TagList tags);
+    short             mPriPosition;
+    PlugIn_ViewPort   m_pastVp;
+    wxString          m_api_url;
+    bool              dbQuery(wxString sql);
+    void              dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns);
+    void              dbFreeResults(char **results);
+    int               dbGetIntNotNullValue(wxString sql);
+    wxString          dbGetStringValue(wxString sql);
+    int		          OnDownloadComplete();
+    void		      ParseOsm(TiXmlElement *osm);
+    TagList		      ParseTags(TiXmlElement *osm);
+    int		          InsertNode(int id, double lat, double lon, TagList tags);
+    int		          InsertWay(int id, double lat, double lon, TagList tags);
+
+    struct aux_params
+    {
+    /* an auxiliary struct used for XML parsing */
+        sqlite3 *db_handle;
+        sqlite3_stmt *ins_nodes_stmt;
+        sqlite3_stmt *ins_node_tags_stmt;
+        sqlite3_stmt *ins_ways_stmt;
+        sqlite3_stmt *ins_way_tags_stmt;
+        sqlite3_stmt *ins_way_refs_stmt;
+        sqlite3_stmt *ins_relations_stmt;
+        sqlite3_stmt *ins_relation_tags_stmt;
+        sqlite3_stmt *ins_relation_refs_stmt;
+        int wr_nodes;
+        int wr_node_tags;
+        int wr_ways;
+        int wr_way_tags;
+        int wr_way_refs;
+        int wr_relations;
+        int wr_rel_tags;
+        int wr_rel_refs;
+    };
+      
+    static int consume_node (const void *user_data, const readosm_node * node);
+    static int consume_way (const void *user_data, const readosm_way * way);
+    static int consume_relation (const void *user_data, const readosm_relation * relation);
+
+      
 };
 
 #endif
