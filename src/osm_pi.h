@@ -38,6 +38,7 @@
 
 #include <wx/stdpaths.h>
 #include <wx/fileconf.h>
+#include <wx/filename.h>
 #include <wx/hashmap.h>
 #include <wx/event.h>
 #include <map>
@@ -152,17 +153,10 @@ private:
     short             mPriPosition;
     PlugIn_ViewPort   m_pastVp;
     wxString          m_api_url;
-    bool              dbQuery(wxString sql);
-    void              dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns);
-    void              dbFreeResults(char **results);
-    int               dbGetIntNotNullValue(wxString sql);
-    wxString          dbGetStringValue(wxString sql);
+    
     int		          OnDownloadComplete();
-    void		      ParseOsm(TiXmlElement *osm);
-    TagList		      ParseTags(TiXmlElement *osm);
-    int		          InsertNode(int id, double lat, double lon, TagList tags);
-    int		          InsertWay(int id, double lat, double lon, TagList tags);
 
+    static const char *m_osm_path;
     struct aux_params
     {
     /* an auxiliary struct used for XML parsing */
@@ -189,6 +183,15 @@ private:
     static int consume_way (const void *user_data, const readosm_way * way);
     static int consume_relation (const void *user_data, const readosm_relation * relation);
 
+    static int insert_node (struct aux_params *params, const readosm_node * node);
+    static int insert_way (struct aux_params *params, const readosm_way * way);
+    static int insert_relation (struct aux_params *params, const readosm_relation * relation);
+
+
+    static void finalize_sql_stmts (struct aux_params *params);
+    static void create_sql_stmts (struct aux_params *params, int journal_off);
+    static void spatialite_autocreate (sqlite3 * db);
+    static void open_db (const char *path, sqlite3 ** handle, int cache_size);
       
 };
 

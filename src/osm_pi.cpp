@@ -77,7 +77,7 @@ osm_pi::osm_pi(void *ppimgr)
 
 int osm_pi::Init(void)
 {
-    int db_ver = 1;
+//    int db_ver = 1;
     spatialite_init(0);
     err_msg = NULL;
     wxString sql;
@@ -129,157 +129,8 @@ int osm_pi::Init(void)
     appendOSDirSlash(&m_dbpath) ;
     m_dbpath.Append(_T(DATABASE_NAME));
 #endif
-      
-    bool newDB = !wxFileExists(m_dbpath);
-    b_dbUsable = true;
 
-    ret = sqlite3_open_v2 (m_dbpath.mb_str(), &m_database, 
-            SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
-    if (ret != SQLITE_OK)
-    {
-        wxLogMessage (_T("OSM_PI: cannot open '%s': %s\n"), 
-                DATABASE_NAME, sqlite3_errmsg (m_database));
-        sqlite3_close (m_database);
-        b_dbUsable = false;
-    }
-
-    if (newDB && b_dbUsable)
-    {
-        // TODO: Check if the database is really empty
-        // TODO: Set the CACHE-SIZE
-        // TODO: Check the GEOMETRY_COLUMNS table      
-
-        //create empty db
-        dbQuery(_T("SELECT InitSpatialMetadata()"));
-
-        //CREATE OUR TABLES
-        // creating the OSM "raw" nodes
-        sql = _T("CREATE TABLE osm_nodes (\n")
-              _T("node_id INTEGER NOT NULL PRIMARY KEY,\n")
-              _T("version INTEGER,\n")
-              _T("timestamp TEXT,\n")
-              _T("uid INTEGER,\n")
-              _T("user TEXT,\n")
-              _T("changeset INTEGER,\n")
-              _T("filtered INTEGER NOT NULL)\n");
-        dbQuery(sql);
-        dbQuery(_T("SELECT AddGeometryColumn('osm_nodes', 'Geometry', 4326, 'POINT', 'XY')"));
-
-        // creating the OSM "raw" node tags
-        sql = _T("CREATE TABLE osm_node_tags (\n")
-              _T("node_id INTEGER NOT NULL,\n")
-              _T("sub INTEGER NOT NULL,\n")
-              _T("k TEXT,\n")
-              _T("v TEXT,\n")
-              _T("CONSTRAINT pk_osm_nodetags PRIMARY KEY (node_id, sub),\n")
-              _T("CONSTRAINT fk_osm_nodetags FOREIGN KEY (node_id) ")
-              _T("REFERENCES osm_nodes (node_id))\n");
-        dbQuery(sql);
-
-        // creating the OSM "raw" ways
-        sql = _T("CREATE TABLE osm_ways (\n")
-              _T("way_id INTEGER NOT NULL PRIMARY KEY,\n")
-              _T("version INTEGER,\n")
-              _T("timestamp TEXT,\n")
-              _T("uid INTEGER,\n")
-              _T("user TEXT,\n")
-              _T("filtered INTEGER NOT NULL)\n");
-        dbQuery(sql);
-
-        // creating the OSM "raw" way tags
-        sql = _T("CREATE TABLE osm_way_tags (\n")
-              _T("way_id INTEGER NOT NULL,\n")
-              _T("sub INTEGER NOT NULL,\n")
-              _T("k TEXT,\n")
-              _T("v TEXT,\n")
-              _T("CONSTRAINT pk_osm_waytags PRIMARY KEY (way_id, sub),\n")
-              _T("CONSTRAINT fk_osm_waytags FOREIGN KEY (way_id) ")
-              _T("REFERENCES osm_ways (way_id))\n");
-        dbQuery(sql);
-
-        // creating the OSM "raw" way-node refs
-        sql = _T("CREATE TABLE osm_way_refs (\n")
-              _T("way_id INTEGER NOT NULL,\n")
-              _T("sub INTEGER NOT NULL,\n")
-              _T("node_id INTEGER NOT NULL,\n")
-              _T("CONSTRAINT pk_osm_waynoderefs PRIMARY KEY (way_id, sub),\n")
-              _T("CONSTRAINT fk_osm_waynoderefs FOREIGN KEY (way_id) \n")
-              _T("REFERENCES osm_ways (way_id))\n");
-        dbQuery(sql);
-
-        // creating an index supporting osm_way_refs.node_id
-        dbQuery(_T("CREATE INDEX idx_osm_ref_way ON osm_way_refs (node_id)"));
-
-        // creating the OSM "raw" relations
-        sql = _T("CREATE TABLE osm_relations (\n")
-              _T("rel_id INTEGER NOT NULL PRIMARY KEY,\n")
-              _T("version INTEGER,\n")
-              _T("timestamp TEXT,\n")
-              _T("uid INTEGER,\n")
-              _T("user TEXT,\n")
-              _T("changeset INTEGER,\n")
-              _T("filtered INTEGER NOT NULL)\n");
-        dbQuery(sql);
-
-        // creating the OSM "raw" relation tags
-        sql = _T("CREATE TABLE osm_relation_tags (\n")
-              _T("rel_id INTEGER NOT NULL,\n")
-              _T("sub INTEGER NOT NULL,\n")
-              _T("k TEXT,\n")
-              _T("v TEXT,\n")
-              _T("CONSTRAINT pk_osm_reltags PRIMARY KEY (rel_id, sub),\n")
-              _T("CONSTRAINT fk_osm_reltags FOREIGN KEY (rel_id) ")
-              _T("REFERENCES osm_relations (rel_id))\n");
-        dbQuery(sql);
-
-        // creating the OSM "raw" relation-node refs
-        sql = _T("CREATE TABLE osm_relation_refs (\n")
-              _T("rel_id INTEGER NOT NULL,\n")
-              _T("sub INTEGER NOT NULL,\n")
-              _T("type TEXT NOT NULL,\n")
-              _T("ref INTEGER NOT NULL,\n")
-              _T("role TEXT,")
-              _T("CONSTRAINT pk_osm_relnoderefs PRIMARY KEY (rel_id, sub),\n")
-              _T("CONSTRAINT fk_osm_relnoderefs FOREIGN KEY (rel_id) ")
-              _T("REFERENCES osm_relations (rel_id))\n");
-        dbQuery(sql);
-
-        // creating an index supporting osm_relation_refs.ref
-        dbQuery(_T("CREATE INDEX idx_osm_ref_relation ON osm_relation_refs (type, ref)"));
-
-    }
-
-    //Update DB structure and contents
-    if (b_dbUsable)
-    {
-        char **results;
-        int n_rows;
-        int n_columns;
-        sql = _T("SELECT value FROM settings WHERE key = 'DBVersion'");
-        ret = sqlite3_get_table (m_database, sql.mb_str(), &results, &n_rows, &n_columns, &err_msg);
-        if (ret != SQLITE_OK)
-        {
-            sqlite3_free (err_msg);
-            sql = _T("CREATE TABLE settings (")
-            _T("key TEXT NOT NULL UNIQUE,")
-            _T("value TEXT)");
-            dbQuery(sql);
-            dbQuery(_T("INSERT INTO settings (key, value) VALUES ('DBVersion', '1')"));
-            db_ver = 1;
-        } 
-        else
-        {
-            db_ver = atoi(results[1]);
-        }
-        sqlite3_free_table (results);
-        wxLogMessage (_T("OSM_PI: Database version: %i\n"), db_ver);
-    }
-
-//      if (b_dbUsable && db_ver == 2)
-//      {
-//            dbQuery(_T("UPDATE settings SET value = 3 WHERE key = 'DBVersion'"));
-//            db_ver = 3;
-//      }
+    wxLogMessage (_T("OSM_PI: Database path %s"), m_dbpath.c_str());
 
       //    This PlugIn needs a toolbar icon, so request its insertion
     m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, 
@@ -315,8 +166,8 @@ bool osm_pi::DeInit(void)
         m_pOsmDialog = NULL;
     }
     SaveConfig();
-    sqlite3_close (m_database);
-    spatialite_cleanup();
+    //sqlite3_close (m_database);
+    //spatialite_cleanup();
     return true;
 }
 
@@ -501,112 +352,6 @@ void osm_pi::OnToolbarToolCallback(int id)
     DownloadUrl(m_api_url);
 }
 
-//---------------------------------------------------------------------------------------------------------
-//
-//          Database methods
-//
-//---------------------------------------------------------------------------------------------------------
-
-bool osm_pi::dbQuery(wxString sql)
-{
-    if (!b_dbUsable)
-        return false;
-    ret = sqlite3_exec (m_database, sql.mb_str(), NULL, NULL, &err_msg);
-    if (ret != SQLITE_OK)
-    {
-        sqlite3_free (err_msg);
-        // some error occurred
-        wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
-        b_dbUsable = false;
-    }
-    return b_dbUsable;
-}
-
-void osm_pi::dbGetTable(wxString sql, char ***results, int &n_rows, int &n_columns)
-{
-    ret = sqlite3_get_table (m_database, sql.mb_str(), results, &n_rows, &n_columns, &err_msg);
-    if (ret != SQLITE_OK)
-    {
-        sqlite3_free (err_msg);
-        wxLogMessage (_T("Database error: %s in query: %s\n"), *err_msg, sql.c_str());
-        b_dbUsable = false;
-    } 
-}
-
-wxString osm_pi::dbGetStringValue(wxString sql)
-{
-    char **result;
-    int n_rows;
-    int n_columns;
-    dbGetTable(sql, &result, n_rows, n_columns);
-    dbFreeResults(result);
-    wxArrayString surveys;
-    wxString ret = wxString::FromUTF8(result[1]);
-    if(n_rows == 1)
-        return ret;
-    else
-        return wxEmptyString;
-}
-
-int osm_pi::dbGetIntNotNullValue(wxString sql)
-{
-    char **result;
-    int n_rows;
-    int n_columns;
-    dbGetTable(sql, &result, n_rows, n_columns);
-    dbFreeResults(result);
-    wxArrayString surveys;
-    int ret = atoi(result[1]);
-    if(n_rows == 1)
-        return ret;
-    else
-        return 0;
-}
-
-void osm_pi::dbFreeResults(char **results)
-{
-    sqlite3_free_table (results);
-}
-
-int osm_pi::InsertNode(int id, double lat, double lon, TagList tags)
-{
-    //wxString time = _T("current_timestamp");
-    //if (timestamp > 0)
-    //      time = wxDateTime(timestamp).FormatISODate().Append(_T(" ")).Append(wxDateTime(timestamp).FormatISOTime());
-    //wxString sql = wxString::Format(_T("INSERT INTO \"osm_nodes\" (\"version\", \"timestamp\", \"uid\", \"user\", \"changeset\", \"Geometry\",) VALUES (%f , %s, %i, %f, GeomFromText('POINT(%f %f)', %i))"), version, time.c_str(), uid, user, changeset, lon, lat, projection);
-    //dbQuery (sql);
-    //return sqlite3_last_insert_rowid(m_database);
-
-	wxLogMessage (_T("OSM_PI: InsertNode [%i, %f, %f]"), id, (float)lat, (float)lon);
-	// iterate over all the tags
-	TagList::iterator it;
-	for( it = tags.begin(); it != tags.end(); ++it )
-	{
-        //wxString sql = wxString::Format(_T("INSERT INTO \"osm_node_tags\" (\"node_id\", \"sub\", \"k\", \"v\") VALUES (%i , %s, %s, %s))"), node_id, sub, k, v);
-        //dbQuery (sql);
-        //return sqlite3_last_insert_rowid(m_database);
-		wxString key = it->first, value = it->second;
-		wxLogMessage (_T("OSM_PI: InsertNodeTags [%s, %s]"), key.c_str(), value.c_str());
-	}
-	// insert in the database
-	return 0;
-}
-
-int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
-{
-	wxLogMessage (_T("OSM_PI: InsertWay [%i, %f, %f]"), id, (float)lat, (float)lon);
-	// iterate over all the tags
-	TagList::iterator it;
-	for( it = tags.begin(); it != tags.end(); ++it )
-	{
-		wxString key = it->first, value = it->second;
-		wxLogMessage (_T("OSM_PI: InsertWayTags [%s, %s]"), key.c_str(), value.c_str());
-	}
-	// insert in the database
-	return 0;
-}
-
-
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -614,16 +359,18 @@ int osm_pi::InsertWay(int id, double lat, double lon, TagList tags)
 //
 //---------------------------------------------------------------------------------------------------------
 
+const char *osm_pi::m_osm_path = "/tmp/features.osm";
+
 void osm_pi::DownloadUrl(wxString url)
 {
     wxLogMessage (_T("OSM_PI: DownloadUrl [%s]"), url.c_str());
     CURL *curl;
     FILE *fp;
     CURLcode res;
-    char outfilename[FILENAME_MAX] = "/tmp/features.osm";
+    
     curl = curl_easy_init();
     if (curl) {
-        fp = fopen(outfilename,"wb");
+        fp = fopen(m_osm_path,"wb");
         curl_easy_setopt(curl, CURLOPT_URL, url.mb_str().data() );
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
@@ -659,33 +406,57 @@ void osm_pi::DownloadUrl(wxString url)
 	}
 }
 
+//---------------------------------------------------------------------------------------------------------
+//
+//          Database methods
+//
+//---------------------------------------------------------------------------------------------------------
+
 int osm_pi::OnDownloadComplete()
 {
     wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
-    //sqlite3 *handle;
-    const char *osm_path = NULL;
-    //const char *db_path = NULL;
-    //int cache_size = 0;
-    //int journal_off = 0;
+    sqlite3 *handle;
+    //const char *osm_path = NULL;
+    int cache_size = 0;
+    int journal_off = 0;
     struct aux_params params;
     const void *osm_handle;
 
-    osm_path = "/tmp/features.osm";
-    //db_path = m_dbpath.mb_str();
+/* initializing the aux-structs */
+    params.db_handle = NULL;
+    params.ins_nodes_stmt = NULL;
+    params.ins_node_tags_stmt = NULL;
+    params.ins_ways_stmt = NULL;
+    params.ins_way_tags_stmt = NULL;
+    params.ins_way_refs_stmt = NULL;
+    params.ins_relations_stmt = NULL;
+    params.ins_relation_tags_stmt = NULL;
+    params.ins_relation_refs_stmt = NULL;
+    params.wr_nodes = 0;
+    params.wr_node_tags = 0;
+    params.wr_ways = 0;
+    params.wr_way_tags = 0;
+    params.wr_way_refs = 0;
+    params.wr_relations = 0;
+    params.wr_rel_tags = 0;
+    params.wr_rel_refs = 0;
 
 /* opening the DB */
-//    open_db (db_path, &handle, cache_size);
+    open_db (m_dbpath.mb_str(), &handle, cache_size);
+    if (!handle)
+	return -1;
+    params.db_handle = handle;
 
 /* creating SQL prepared statements */
-//    create_sql_stmts (&params, journal_off);
+    create_sql_stmts (&params, journal_off);
 
 /* parsing the input OSM-file */
-    if (readosm_open (osm_path, &osm_handle) != READOSM_OK)
+    if (readosm_open (m_osm_path, &osm_handle) != READOSM_OK)
     {
         wxLogMessage (_T("OSM_PI: Cant open file"));
-        fprintf (stderr, "cannot open %s\n", osm_path);
-//        finalize_sql_stmts (&params);
-//        sqlite3_close (handle);
+        fprintf (stderr, "cannot open %s\n", m_osm_path);
+        finalize_sql_stmts (&params);
+        sqlite3_close (handle);
         readosm_close (osm_handle);
         return -1;
     }
@@ -694,20 +465,19 @@ int osm_pi::OnDownloadComplete()
 	(osm_handle, &params, consume_node, consume_way,
 	    consume_relation) != READOSM_OK)
     {
-//        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), osm_path);
-        fprintf (stderr, "unrecoverable error while parsing %s\n", osm_path);
-        //	  finalize_sql_stmts (&params);
-        //	  sqlite3_close (handle);
-        //	  readosm_close (osm_handle);
+//        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), m_osm_path);
+        fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
+        finalize_sql_stmts (&params);
+        sqlite3_close (handle);
+        readosm_close (osm_handle);
         return -1;
 	}
     readosm_close (osm_handle);
 
 /* finalizing SQL prepared statements */
-//    finalize_sql_stmts (&params);
+    finalize_sql_stmts (&params);
 
 /* printing out statistics */
-/*
     printf ("inserted %d nodes\n", params.wr_nodes);
     printf ("\t%d tags\n", params.wr_node_tags);
     printf ("inserted %d ways\n", params.wr_ways);
@@ -716,10 +486,10 @@ int osm_pi::OnDownloadComplete()
     printf ("inserted %d relations\n", params.wr_relations);
     printf ("\t%d tags\n", params.wr_rel_tags);
     printf ("\t%d refs\n", params.wr_rel_refs);
-*/
+    printf ("Into database: %s\n", m_dbpath.c_str());
 
 /* closing the DB connection */
-//    sqlite3_close (handle);
+    sqlite3_close (handle);
     return 0;
 }
 
@@ -728,9 +498,9 @@ int osm_pi::consume_node (const void *user_data, const readosm_node * node)
 {
     wxLogMessage (_T("OSM_PI: processing an OSM Node (ReadOSM callback function)"));
 /* processing an OSM Node (ReadOSM callback function) */
-//    struct aux_params *params = (struct aux_params *) user_data;
-//    if (!insert_node (params, node))
-//	return READOSM_ABORT;
+    struct aux_params *params = (struct aux_params *) user_data;
+    if (!insert_node (params, node))
+    	return READOSM_ABORT;
     return READOSM_OK;
 }
 
@@ -738,9 +508,9 @@ int osm_pi::consume_way (const void *user_data, const readosm_way * way)
 {
     wxLogMessage (_T("OSM_PI: processing an OSM Way (ReadOSM callback function)"));
 /* processing an OSM Way (ReadOSM callback function) */
-//    struct aux_params *params = (struct aux_params *) user_data;
-//    if (!insert_way (params, way))
-//	return READOSM_ABORT;
+    struct aux_params *params = (struct aux_params *) user_data;
+    if (!insert_way (params, way))
+    	return READOSM_ABORT;
     return READOSM_OK;
 }
 
@@ -748,173 +518,867 @@ int osm_pi::consume_relation (const void *user_data, const readosm_relation * re
 {
     wxLogMessage (_T("OSM_PI: processing an OSM Relation (ReadOSM callback function)"));
 /* processing an OSM Relation (ReadOSM callback function) */
-//    struct aux_params *params = (struct aux_params *) user_data;
-//    if (!insert_relation (params, relation))
-//	return READOSM_ABORT;
+    struct aux_params *params = (struct aux_params *) user_data;
+    if (!insert_relation (params, relation))
+    	return READOSM_ABORT;
     return READOSM_OK;
 }
 
-
-
-void osm_pi::ParseOsm(TiXmlElement *osm)
+int osm_pi::insert_node (struct aux_params *params, const readosm_node * node)
 {
-    TiXmlElement *el = osm->FirstChildElement();
-    while (el)
-    {
-        wxString el_name = wxString::FromUTF8(el->Value());
-        wxLogMessage (_T("OSM_PI: ParseOsm [%s]"), el_name.c_str());
-
-        if (el_name == _T("bounds"))
-        {
-        }
-        else if (el_name == _T("node"))
-        {
-            int id = atoi(el->Attribute("id"));
-            int version = atoi(el->Attribute("version"));
-            wxString timestamp = wxString::FromUTF8(el->Attribute("timestamp"));
-            int uid = atoi(el->Attribute("uid"));
-            wxString user = wxString::FromUTF8(el->Attribute("user"));
-            int changeset = atoi(el->Attribute("changeset"));
-            float lat = atof(el->Attribute("lat"));
-            float lon = atof(el->Attribute("lon"));
-
-            //InsertNode(id, lat, lon, tags);
-            
-	        wxString sql = _T("INSERT INTO osm_nodes (node_id, version, timestamp, uid, user, changeset, filtered, Geometry) ")
-                           _T("VALUES (%i, %i, '%s', %i, '%s', %i, 0, GeomFromText('POINT(%f %f)',4326))");
-            wxString sql_string = wxString::Format(sql, id, version, timestamp.c_str(), uid, user.c_str(), changeset, lat, lon);
-            wxLogMessage (_T("OSM_PI: %s"), sql_string.c_str());
-            //dbQuery (sql_string);
-
-            err_msg = NULL;
-            ret = sqlite3_exec (m_database, sql_string.mb_str(), NULL, NULL, &err_msg);
-            if (ret != SQLITE_OK)
-            {
-                // some error occurred
-                fprintf(stderr, "SQL error: %s\n", err_msg);
-                sqlite3_free (err_msg);
-            }
-            int node_id = sqlite3_last_insert_rowid(m_database);
-
-            //TagList tags = ParseTags(el);
-            int tag_id = 0;
-	        TiXmlElement *tag_el = el->FirstChildElement();
-	        while (tag_el)
-	        {
-		        wxString tag_el_name = wxString::FromUTF8(tag_el->Value());
-		        if (tag_el_name == _T("tag"))
-		        {
-			        wxString key = wxString::FromUTF8(tag_el->Attribute("k"));
-			        wxString value = wxString::FromUTF8(tag_el->Attribute("v"));
-
-	                wxString sql = _T("INSERT INTO osm_node_tags (node_id, sub, k, v) ")
-                                   _T("VALUES (%i, %i, '%s', '%s')");
-                    wxString sql_string = wxString::Format(sql, node_id, tag_id++, key.c_str(), value.c_str());
-                    wxLogMessage (_T("OSM_PI: %s"), sql_string.c_str());
-
-                    err_msg = NULL;
-                    ret = sqlite3_exec (m_database, sql_string.mb_str(), NULL, NULL, &err_msg);
-                    if (ret != SQLITE_OK)
-                    {
-                        // some error occurred
-                        fprintf(stderr, "SQL error: %s\n", err_msg);
-                        sqlite3_free (err_msg);
-                    }
-		        }
-		        tag_el = tag_el->NextSiblingElement();
-	        }
-
-
-        }
-        else if (el_name == _T("way"))
-        {
-            //int id = atoi(el->Attribute("id"));
-            //float lat = atof(el->Attribute("lat"));
-            //float lon = atof(el->Attribute("lon"));
-            //TagList tags = ParseTags(el);
-
-            //InsertWay(id, lat, lon, tags);
-        }
-        else if (el_name == _T("relation"))
-        {
-            //int id = atoi(el->Attribute("id"));
-            //float lat = atof(el->Attribute("lat"));
-            //float lon = atof(el->Attribute("lon"));
-            //TagList tags = ParseTags(el);
-
-            //InsertRelation(id, lat, lon, tags);
-        }
-        el = el->NextSiblingElement();
-    }
-}
-
-TagList osm_pi::ParseTags(TiXmlElement *osm)
-{
-	TagList tags;
-	TiXmlElement *el = osm->FirstChildElement();
-	while (el)
-	{
-		wxString el_name = wxString::FromUTF8(el->Value());
-		if (el_name == _T("tag"))
-		{
-			wxString key = wxString::FromUTF8(el->Attribute("k"));
-			wxString value = wxString::FromUTF8(el->Attribute("v"));
-			tags[key] = value;
-		}
-		el = el->NextSiblingElement();
-	}
-	return tags;
-}
-/*
-NodeRefList osm_pi::ParseNodeRefs(TiXmlElement *osm)
-{
-	NodeRefList nodelist;
-	TiXmlElement *el = osm->FirstChildElement();
-	while (el)
-	{
-		wxString el_name = wxString::FromUTF8(el->Value());
-		if (el_name == _T("nd"))
-		{
-			wxString ref = wxString::FromUTF8(el->Attribute("ref"));
-			nodelist[nodelist->GetCount()] = value;
-		}
-		el = el->NextSiblingElement();
-	}
-	return nodelist;
-}*/
-
-/*
-void osm_pi::ParseOsm(TiXmlElement *osm)
-{
-      TiXmlElement *parameter = osm->FirstChildElement();
-      while (parameter)
+    wxLogMessage (_T("OSM_PI: insert_node"));
+    int ret;
+    unsigned char *blob;
+    int blob_size;
+    int i_tag;
+    const readosm_tag *p_tag;
+    gaiaGeomCollPtr geom = NULL;
+    if (node->longitude != READOSM_UNDEFINED
+	&& node->latitude != READOSM_UNDEFINED)
       {
-            wxString paramname = wxString::FromUTF8(parameter->Value());
-            else if (paramname == _T("way"))
-            {
-//				  <way id="112284730">
-//					<nd ref="1276680173"/>
-//					<nd ref="1276680131"/>
-//					<nd ref="1276680154"/>
-//					<tag k="seamark:type" v="separation_line"/>
-//				  </way>
-            }
-            else if (paramname == _T("relation"))
-            {
-                  //TODO: We do not need this, so let's ignore it for now
-            }
-            parameter = parameter->NextSiblingElement();
+	  geom = gaiaAllocGeomColl ();
+	  geom->Srid = 4326;
+	  gaiaAddPointToGeomColl (geom, node->longitude, node->latitude);
+      }
+    sqlite3_reset (params->ins_nodes_stmt);
+    sqlite3_clear_bindings (params->ins_nodes_stmt);
+    sqlite3_bind_int64 (params->ins_nodes_stmt, 1, node->id);
+    if (node->version == READOSM_UNDEFINED)
+	sqlite3_bind_null (params->ins_nodes_stmt, 2);
+    else
+	sqlite3_bind_int64 (params->ins_nodes_stmt, 2, node->version);
+    if (node->timestamp == NULL)
+	sqlite3_bind_null (params->ins_nodes_stmt, 3);
+    else
+	sqlite3_bind_text (params->ins_nodes_stmt, 3, node->timestamp,
+			   strlen (node->timestamp), SQLITE_STATIC);
+    if (node->uid == READOSM_UNDEFINED)
+	sqlite3_bind_null (params->ins_nodes_stmt, 4);
+    else
+	sqlite3_bind_int64 (params->ins_nodes_stmt, 4, node->uid);
+    if (node->user == NULL)
+	sqlite3_bind_null (params->ins_nodes_stmt, 5);
+    else
+	sqlite3_bind_text (params->ins_nodes_stmt, 5, node->user,
+			   strlen (node->user), SQLITE_STATIC);
+    if (node->changeset == READOSM_UNDEFINED)
+	sqlite3_bind_null (params->ins_nodes_stmt, 6);
+    else
+	sqlite3_bind_int64 (params->ins_nodes_stmt, 6, node->changeset);
+    if (!geom)
+	sqlite3_bind_null (params->ins_nodes_stmt, 7);
+    else
+      {
+	  gaiaToSpatiaLiteBlobWkb (geom, &blob, &blob_size);
+	  gaiaFreeGeomColl (geom);
+	  sqlite3_bind_blob (params->ins_nodes_stmt, 7, blob, blob_size, free);
+      }
+    ret = sqlite3_step (params->ins_nodes_stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+      {
+	  fprintf (stderr, "sqlite3_step() error: INSERT INTO osm_nodes\n");
+	  return 0;
+      }
+    params->wr_nodes += 1;
+
+    for (i_tag = 0; i_tag < node->tag_count; i_tag++)
+      {
+	  p_tag = node->tags + i_tag;
+	  sqlite3_reset (params->ins_node_tags_stmt);
+	  sqlite3_clear_bindings (params->ins_node_tags_stmt);
+	  sqlite3_bind_int64 (params->ins_node_tags_stmt, 1, node->id);
+	  sqlite3_bind_int (params->ins_node_tags_stmt, 2, i_tag);
+	  if (p_tag->key == NULL)
+	      sqlite3_bind_null (params->ins_node_tags_stmt, 3);
+	  else
+	      sqlite3_bind_text (params->ins_node_tags_stmt, 3, p_tag->key,
+				 strlen (p_tag->key), SQLITE_STATIC);
+	  if (p_tag->value == NULL)
+	      sqlite3_bind_null (params->ins_node_tags_stmt, 4);
+	  else
+	      sqlite3_bind_text (params->ins_node_tags_stmt, 4, p_tag->value,
+				 strlen (p_tag->value), SQLITE_STATIC);
+	  ret = sqlite3_step (params->ins_node_tags_stmt);
+	  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	      ;
+	  else
+	    {
+		fprintf (stderr,
+			 "sqlite3_step() error: INSERT INTO osm_node_tags\n");
+		return 0;
+	    }
+	  params->wr_node_tags += 1;
+      }
+    return 1;
+}
+
+int osm_pi::insert_way (struct aux_params *params, const readosm_way * way)
+{
+    wxLogMessage (_T("OSM_PI: insert_way"));
+    int ret;
+    int i_tag;
+    int i_ref;
+    const readosm_tag *p_tag;
+    sqlite3_reset (params->ins_ways_stmt);
+    sqlite3_clear_bindings (params->ins_ways_stmt);
+    sqlite3_bind_int64 (params->ins_ways_stmt, 1, way->id);
+    if (way->version == READOSM_UNDEFINED)
+    	sqlite3_bind_null (params->ins_ways_stmt, 2);
+    else
+    	sqlite3_bind_int64 (params->ins_ways_stmt, 2, way->version);
+    if (way->timestamp == NULL)
+    	sqlite3_bind_null (params->ins_ways_stmt, 3);
+    else
+	    sqlite3_bind_text (params->ins_ways_stmt, 3, way->timestamp,
+			   strlen (way->timestamp), SQLITE_STATIC);
+    if (way->uid == READOSM_UNDEFINED)
+    	sqlite3_bind_null (params->ins_ways_stmt, 4);
+    else
+    	sqlite3_bind_int64 (params->ins_ways_stmt, 4, way->uid);
+    if (way->user == NULL)
+    	sqlite3_bind_null (params->ins_ways_stmt, 5);
+    else
+    	sqlite3_bind_text (params->ins_ways_stmt, 5, way->user,
+			   strlen (way->user), SQLITE_STATIC);
+    if (way->changeset == READOSM_UNDEFINED)
+    	sqlite3_bind_null (params->ins_ways_stmt, 6);
+    else
+    	sqlite3_bind_int64 (params->ins_ways_stmt, 6, way->changeset);
+    ret = sqlite3_step (params->ins_ways_stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+      {
+	  fprintf (stderr, "sqlite3_step() error: INSERT INTO osm_ways\n");
+	  return 0;
+      }
+    params->wr_ways += 1;
+
+    for (i_tag = 0; i_tag < way->tag_count; i_tag++)
+      {
+	  p_tag = way->tags + i_tag;
+	  sqlite3_reset (params->ins_way_tags_stmt);
+	  sqlite3_clear_bindings (params->ins_way_tags_stmt);
+	  sqlite3_bind_int64 (params->ins_way_tags_stmt, 1, way->id);
+	  sqlite3_bind_int (params->ins_way_tags_stmt, 2, i_tag);
+	  if (p_tag->key == NULL)
+	      sqlite3_bind_null (params->ins_way_tags_stmt, 3);
+	  else
+	      sqlite3_bind_text (params->ins_way_tags_stmt, 3, p_tag->key,
+				 strlen (p_tag->key), SQLITE_STATIC);
+	  if (p_tag->value == NULL)
+	      sqlite3_bind_null (params->ins_way_tags_stmt, 4);
+	  else
+	      sqlite3_bind_text (params->ins_way_tags_stmt, 4, p_tag->value,
+				 strlen (p_tag->value), SQLITE_STATIC);
+	  ret = sqlite3_step (params->ins_way_tags_stmt);
+	  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	      ;
+	  else
+	    {
+		fprintf (stderr,
+			 "sqlite3_step() error: INSERT INTO osm_way_tags\n");
+		return 0;
+	    }
+	  params->wr_way_tags += 1;
+      }
+
+    for (i_ref = 0; i_ref < way->node_ref_count; i_ref++)
+      {
+	  sqlite3_int64 node_id = *(way->node_refs + i_ref);
+	  sqlite3_reset (params->ins_way_refs_stmt);
+	  sqlite3_clear_bindings (params->ins_way_refs_stmt);
+	  sqlite3_bind_int64 (params->ins_way_refs_stmt, 1, way->id);
+	  sqlite3_bind_int (params->ins_way_refs_stmt, 2, i_ref);
+	  sqlite3_bind_int64 (params->ins_way_refs_stmt, 3, node_id);
+	  ret = sqlite3_step (params->ins_way_refs_stmt);
+	  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	      ;
+	  else
+	    {
+		fprintf (stderr,
+			 "sqlite3_step() error: INSERT INTO osm_way_refs\n");
+		return 0;
+	    }
+	  params->wr_way_refs += 1;
+      }
+    return 1;
+}
+
+int osm_pi::insert_relation (struct aux_params *params, const readosm_relation * relation)
+{
+    wxLogMessage (_T("OSM_PI: insert_relation"));
+    int ret;
+    int i_tag;
+    int i_member;
+    const readosm_tag *p_tag;
+    const readosm_member *p_member;
+    sqlite3_reset (params->ins_relations_stmt);
+    sqlite3_clear_bindings (params->ins_relations_stmt);
+    sqlite3_bind_int64 (params->ins_relations_stmt, 1, relation->id);
+    if (relation->version == READOSM_UNDEFINED)
+	sqlite3_bind_null (params->ins_relations_stmt, 2);
+    else
+	sqlite3_bind_int64 (params->ins_relations_stmt, 2, relation->version);
+    if (relation->timestamp == NULL)
+	sqlite3_bind_null (params->ins_relations_stmt, 3);
+    else
+	sqlite3_bind_text (params->ins_relations_stmt, 3, relation->timestamp,
+			   strlen (relation->timestamp), SQLITE_STATIC);
+    if (relation->uid == READOSM_UNDEFINED)
+	sqlite3_bind_null (params->ins_relations_stmt, 4);
+    else
+	sqlite3_bind_int64 (params->ins_relations_stmt, 4, relation->uid);
+    if (relation->user == NULL)
+	sqlite3_bind_null (params->ins_relations_stmt, 5);
+    else
+	sqlite3_bind_text (params->ins_relations_stmt, 5, relation->user,
+			   strlen (relation->user), SQLITE_STATIC);
+    if (relation->changeset == READOSM_UNDEFINED)
+	sqlite3_bind_null (params->ins_relations_stmt, 6);
+    else
+	sqlite3_bind_int64 (params->ins_relations_stmt, 6, relation->changeset);
+    ret = sqlite3_step (params->ins_relations_stmt);
+    if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	;
+    else
+      {
+	  fprintf (stderr, "sqlite3_step() error: INSERT INTO osm_relations\n");
+	  return 0;
+      }
+    params->wr_relations += 1;
+
+    for (i_tag = 0; i_tag < relation->tag_count; i_tag++)
+      {
+	  p_tag = relation->tags + i_tag;
+	  sqlite3_reset (params->ins_relation_tags_stmt);
+	  sqlite3_clear_bindings (params->ins_relation_tags_stmt);
+	  sqlite3_bind_int64 (params->ins_relation_tags_stmt, 1, relation->id);
+	  sqlite3_bind_int (params->ins_relation_tags_stmt, 2, i_tag);
+	  if (p_tag->key == NULL)
+	      sqlite3_bind_null (params->ins_relation_tags_stmt, 3);
+	  else
+	      sqlite3_bind_text (params->ins_relation_tags_stmt, 3, p_tag->key,
+				 strlen (p_tag->key), SQLITE_STATIC);
+	  if (p_tag->value == NULL)
+	      sqlite3_bind_null (params->ins_relation_tags_stmt, 4);
+	  else
+	      sqlite3_bind_text (params->ins_relation_tags_stmt, 4,
+				 p_tag->value, strlen (p_tag->value),
+				 SQLITE_STATIC);
+	  ret = sqlite3_step (params->ins_relation_tags_stmt);
+	  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	      ;
+	  else
+	    {
+		fprintf (stderr,
+			 "sqlite3_step() error: INSERT INTO osm_relation_tags\n");
+		return 0;
+	    }
+	  params->wr_rel_tags += 1;
+      }
+
+    for (i_member = 0; i_member < relation->member_count; i_member++)
+      {
+	  p_member = relation->members + i_member;
+	  sqlite3_reset (params->ins_relation_refs_stmt);
+	  sqlite3_clear_bindings (params->ins_relation_refs_stmt);
+	  sqlite3_bind_int64 (params->ins_relation_refs_stmt, 1, relation->id);
+	  sqlite3_bind_int (params->ins_relation_refs_stmt, 2, i_member);
+	  if (p_member->member_type == READOSM_MEMBER_NODE)
+	      sqlite3_bind_text (params->ins_relation_refs_stmt, 3, "N", 1,
+				 SQLITE_STATIC);
+	  else if (p_member->member_type == READOSM_MEMBER_WAY)
+	      sqlite3_bind_text (params->ins_relation_refs_stmt, 3, "W", 1,
+				 SQLITE_STATIC);
+	  else if (p_member->member_type == READOSM_MEMBER_RELATION)
+	      sqlite3_bind_text (params->ins_relation_refs_stmt, 3, "R", 1,
+				 SQLITE_STATIC);
+	  else
+	      sqlite3_bind_text (params->ins_relation_refs_stmt, 3, "?", 1,
+				 SQLITE_STATIC);
+	  sqlite3_bind_int64 (params->ins_relation_refs_stmt, 4, p_member->id);
+	  if (p_member->role == NULL)
+	      sqlite3_bind_null (params->ins_relation_refs_stmt, 5);
+	  else
+	      sqlite3_bind_text (params->ins_relation_refs_stmt, 5,
+				 p_member->role, strlen (p_member->role),
+				 SQLITE_STATIC);
+	  ret = sqlite3_step (params->ins_relation_refs_stmt);
+	  if (ret == SQLITE_DONE || ret == SQLITE_ROW)
+	      ;
+	  else
+	    {
+		fprintf (stderr,
+			 "sqlite3_step() error: INSERT INTO osm_relation_refs\n");
+		return 0;
+	    }
+	  params->wr_rel_refs += 1;
+      }
+    return 1;
+}
+
+void osm_pi::finalize_sql_stmts (struct aux_params *params)
+{
+    wxLogMessage (_T("OSM_PI: finalize_sql_stmts"));
+    int ret;
+    char *sql_err = NULL;
+
+    if (params->ins_nodes_stmt != NULL)
+	sqlite3_finalize (params->ins_nodes_stmt);
+    if (params->ins_node_tags_stmt != NULL)
+	sqlite3_finalize (params->ins_node_tags_stmt);
+    if (params->ins_ways_stmt != NULL)
+	sqlite3_finalize (params->ins_ways_stmt);
+    if (params->ins_way_tags_stmt != NULL)
+	sqlite3_finalize (params->ins_way_tags_stmt);
+    if (params->ins_way_refs_stmt != NULL)
+	sqlite3_finalize (params->ins_way_refs_stmt);
+    if (params->ins_relations_stmt != NULL)
+	sqlite3_finalize (params->ins_relations_stmt);
+    if (params->ins_relation_tags_stmt != NULL)
+	sqlite3_finalize (params->ins_relation_tags_stmt);
+    if (params->ins_relation_refs_stmt != NULL)
+	sqlite3_finalize (params->ins_relation_refs_stmt);
+
+/* committing the still pending SQL Transaction */
+    ret = sqlite3_exec (params->db_handle, "COMMIT", NULL, NULL, &sql_err);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "COMMIT TRANSACTION error: %s\n", sql_err);
+	  sqlite3_free (sql_err);
+	  return;
       }
 }
 
-int osm_pi::InsertWayTag(int way_id, wxString k, wxString v)
+void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
 {
-	wxLogMessage (_T("OSM_PI: InsertWayTag [%i, %d, %d]"), way_id, k, v);
-	// add the tag to the database
-	return 0
+    wxLogMessage (_T("OSM_PI: create_sql_stmts"));
+    sqlite3_stmt *ins_nodes_stmt;
+    sqlite3_stmt *ins_node_tags_stmt;
+    sqlite3_stmt *ins_ways_stmt;
+    sqlite3_stmt *ins_way_tags_stmt;
+    sqlite3_stmt *ins_way_refs_stmt;
+    sqlite3_stmt *ins_relations_stmt;
+    sqlite3_stmt *ins_relation_tags_stmt;
+    sqlite3_stmt *ins_relation_refs_stmt;
+    char sql[1024];
+    int ret;
+    char *sql_err = NULL;
+
+    if (journal_off)
+      {
+	  /* disabling the journal: unsafe but faster */
+	  ret =
+	      sqlite3_exec (params->db_handle, "PRAGMA journal_mode = OFF",
+			    NULL, NULL, &sql_err);
+	  if (ret != SQLITE_OK)
+	    {
+		fprintf (stderr, "PRAGMA journal_mode=OFF error: %s\n",
+			 sql_err);
+		sqlite3_free (sql_err);
+		return;
+	    }
+      }
+
+/* the complete operation is handled as an unique SQL Transaction */
+    ret = sqlite3_exec (params->db_handle, "BEGIN", NULL, NULL, &sql_err);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "BEGIN TRANSACTION error: %s\n", sql_err);
+	  sqlite3_free (sql_err);
+	  return;
+      }
+    strcpy (sql,
+	    "INSERT OR REPLACE INTO osm_nodes (node_id, version, timestamp, uid, user, changeset, filtered, Geometry) ");
+    strcat (sql, "VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_nodes_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql, "INSERT OR REPLACE INTO osm_node_tags (node_id, sub, k, v) ");
+    strcat (sql, "VALUES (?, ?, ?, ?)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_node_tags_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql,
+	    "INSERT OR REPLACE INTO osm_ways (way_id, version, timestamp, uid, user, changeset, filtered) ");
+    strcat (sql, "VALUES (?, ?, ?, ?, ?, ?, 0)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_ways_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql, "INSERT OR REPLACE INTO osm_way_tags (way_id, sub, k, v) ");
+    strcat (sql, "VALUES (?, ?, ?, ?)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_way_tags_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql, "INSERT OR REPLACE INTO osm_way_refs (way_id, sub, node_id) ");
+    strcat (sql, "VALUES (?, ?, ?)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_way_refs_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql,
+	    "INSERT OR REPLACE INTO osm_relations (rel_id, version, timestamp, uid, user, changeset, filtered) ");
+    strcat (sql, "VALUES (?, ?, ?, ?, ?, ?, 0)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_relations_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql, "INSERT OR REPLACE INTO osm_relation_tags (rel_id, sub, k, v) ");
+    strcat (sql, "VALUES (?, ?, ?, ?)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_relation_tags_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+    strcpy (sql,
+	    "INSERT OR REPLACE INTO osm_relation_refs (rel_id, sub, type, ref, role) ");
+    strcat (sql, "VALUES (?, ?, ?, ?, ?)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &ins_relation_refs_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  finalize_sql_stmts (params);
+	  return;
+      }
+
+    params->ins_nodes_stmt = ins_nodes_stmt;
+    params->ins_node_tags_stmt = ins_node_tags_stmt;
+    params->ins_ways_stmt = ins_ways_stmt;
+    params->ins_way_tags_stmt = ins_way_tags_stmt;
+    params->ins_way_refs_stmt = ins_way_refs_stmt;
+    params->ins_relations_stmt = ins_relations_stmt;
+    params->ins_relation_tags_stmt = ins_relation_tags_stmt;
+    params->ins_relation_refs_stmt = ins_relation_refs_stmt;
 }
 
-*/
+void osm_pi::spatialite_autocreate (sqlite3 * db)
+{
+    wxLogMessage (_T("OSM_PI: spatialite_autocreate"));
+/* attempting to perform self-initialization for a newly created DB */
+    int ret;
+    char sql[1024];
+    char *err_msg = NULL;
+    int count;
+    int i;
+    char **results;
+    int rows;
+    int columns;
 
+/* checking if this DB is really empty */
+    strcpy (sql, "SELECT Count(*) from sqlite_master");
+    ret = sqlite3_get_table (db, sql, &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	return;
+    if (rows < 1)
+	;
+    else
+      {
+	  for (i = 1; i <= rows; i++)
+	      count = atoi (results[(i * columns) + 0]);
+      }
+    sqlite3_free_table (results);
+
+    if (count > 0)
+	return;
+
+/* all right, it's empty: proceding to initialize */
+    strcpy (sql, "SELECT InitSpatialMetadata()");
+    ret = sqlite3_exec (db, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "InitSpatialMetadata() error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  return;
+      }
+}
+
+void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
+{
+    wxLogMessage (_T("OSM_PI: open_db"));
+/* opening the DB */
+    sqlite3 *db_handle;
+    int ret;
+    char sql[1024];
+    char *err_msg = NULL;
+    int spatialite_rs = 0;
+    int spatialite_gc = 0;
+    int rs_srid = 0;
+    int auth_name = 0;
+    int auth_srid = 0;
+    int ref_sys_name = 0;
+    int proj4text = 0;
+    int f_table_name = 0;
+    int f_geometry_column = 0;
+    int coord_dimension = 0;
+    int gc_srid = 0;
+    int type = 0;
+    int spatial_index_enabled = 0;
+    const char *name;
+    int i;
+    char **results;
+    int rows;
+    int columns;
+
+    *handle = NULL;
+    spatialite_init (0);
+    printf ("SQLite version: %s\n", sqlite3_libversion ());
+    printf ("SpatiaLite version: %s\n\n", spatialite_version ());
+
+    ret =
+	sqlite3_open_v2 (path, &db_handle,
+			 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "cannot open '%s': %s\n", path,
+		   sqlite3_errmsg (db_handle));
+	  sqlite3_close (db_handle);
+	  return;
+      }
+      
+    // see if we've already created the database
+    strcpy (sql, "SELECT value FROM settings WHERE key = 'DBVersion'");
+    ret = sqlite3_get_table (db_handle, sql, &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	;
+	else
+	{
+	    // get DBVersion
+        sqlite3_free_table (results);
+        *handle = db_handle;
+        return;
+	}
+    sqlite3_free_table (results);
+
+    spatialite_autocreate (db_handle);
+    if (cache_size > 0)
+      {
+	  /* setting the CACHE-SIZE */
+	  sprintf (sql, "PRAGMA cache_size=%d", cache_size);
+	  sqlite3_exec (db_handle, sql, NULL, NULL, NULL);
+      }
+
+/* checking the GEOMETRY_COLUMNS table */
+    strcpy (sql, "PRAGMA table_info(geometry_columns)");
+    ret = sqlite3_get_table (db_handle, sql, &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	goto unknown;
+    if (rows < 1)
+	;
+    else
+      {
+	  for (i = 1; i <= rows; i++)
+	    {
+		name = results[(i * columns) + 1];
+		if (strcasecmp (name, "f_table_name") == 0)
+		    f_table_name = 1;
+		if (strcasecmp (name, "f_geometry_column") == 0)
+		    f_geometry_column = 1;
+		if (strcasecmp (name, "coord_dimension") == 0)
+		    coord_dimension = 1;
+		if (strcasecmp (name, "srid") == 0)
+		    gc_srid = 1;
+		if (strcasecmp (name, "type") == 0)
+		    type = 1;
+		if (strcasecmp (name, "spatial_index_enabled") == 0)
+		    spatial_index_enabled = 1;
+	    }
+      }
+    sqlite3_free_table (results);
+    if (f_table_name && f_geometry_column && type && coord_dimension
+	&& gc_srid && spatial_index_enabled)
+	spatialite_gc = 1;
+
+/* checking the SPATIAL_REF_SYS table */
+    strcpy (sql, "PRAGMA table_info(spatial_ref_sys)");
+    ret = sqlite3_get_table (db_handle, sql, &results, &rows, &columns, NULL);
+    if (ret != SQLITE_OK)
+	goto unknown;
+    if (rows < 1)
+	;
+    else
+      {
+	  for (i = 1; i <= rows; i++)
+	    {
+		name = results[(i * columns) + 1];
+		if (strcasecmp (name, "srid") == 0)
+		    rs_srid = 1;
+		if (strcasecmp (name, "auth_name") == 0)
+		    auth_name = 1;
+		if (strcasecmp (name, "auth_srid") == 0)
+		    auth_srid = 1;
+		if (strcasecmp (name, "ref_sys_name") == 0)
+		    ref_sys_name = 1;
+		if (strcasecmp (name, "proj4text") == 0)
+		    proj4text = 1;
+	    }
+      }
+    sqlite3_free_table (results);
+    if (rs_srid && auth_name && auth_srid && ref_sys_name && proj4text)
+	spatialite_rs = 1;
+/* verifying the MetaData format */
+    if (spatialite_gc && spatialite_rs)
+	;
+    else
+	goto unknown;
+
+/* creating the OSM "raw" nodes */
+    strcpy (sql, "CREATE TABLE osm_nodes (\n");
+    strcat (sql, "node_id INTEGER NOT NULL PRIMARY KEY,\n");
+    strcat (sql, "version INTEGER,\n");
+    strcat (sql, "timestamp TEXT,\n");
+    strcat (sql, "uid INTEGER,\n");
+    strcat (sql, "user TEXT,\n");
+    strcat (sql, "changeset INTEGER,\n");
+    strcat (sql, "filtered INTEGER NOT NULL)\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_nodes' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+    strcpy (sql,
+	    "SELECT AddGeometryColumn('osm_nodes', 'Geometry', 4326, 'POINT', 'XY')");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_nodes' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" node tags */
+    strcpy (sql, "CREATE TABLE osm_node_tags (\n");
+    strcat (sql, "node_id INTEGER NOT NULL,\n");
+    strcat (sql, "sub INTEGER NOT NULL,\n");
+    strcat (sql, "k TEXT,\n");
+    strcat (sql, "v TEXT,\n");
+    strcat (sql, "CONSTRAINT pk_osm_nodetags PRIMARY KEY (node_id, sub),\n");
+    strcat (sql, "CONSTRAINT fk_osm_nodetags FOREIGN KEY (node_id) ");
+    strcat (sql, "REFERENCES osm_nodes (node_id))\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_node_tags' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" ways */
+    strcpy (sql, "CREATE TABLE osm_ways (\n");
+    strcat (sql, "way_id INTEGER NOT NULL PRIMARY KEY,\n");
+    strcat (sql, "version INTEGER,\n");
+    strcat (sql, "timestamp TEXT,\n");
+    strcat (sql, "uid INTEGER,\n");
+    strcat (sql, "user TEXT,\n");
+    strcat (sql, "changeset INTEGER,\n");
+    strcat (sql, "filtered INTEGER NOT NULL)\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_ways' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" way tags */
+    strcpy (sql, "CREATE TABLE osm_way_tags (\n");
+    strcat (sql, "way_id INTEGER NOT NULL,\n");
+    strcat (sql, "sub INTEGER NOT NULL,\n");
+    strcat (sql, "k TEXT,\n");
+    strcat (sql, "v TEXT,\n");
+    strcat (sql, "CONSTRAINT pk_osm_waytags PRIMARY KEY (way_id, sub),\n");
+    strcat (sql, "CONSTRAINT fk_osm_waytags FOREIGN KEY (way_id) ");
+    strcat (sql, "REFERENCES osm_ways (way_id))\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_way_tags' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" way-node refs */
+    strcpy (sql, "CREATE TABLE osm_way_refs (\n");
+    strcat (sql, "way_id INTEGER NOT NULL,\n");
+    strcat (sql, "sub INTEGER NOT NULL,\n");
+    strcat (sql, "node_id INTEGER NOT NULL,\n");
+    strcat (sql, "CONSTRAINT pk_osm_waynoderefs PRIMARY KEY (way_id, sub),\n");
+    strcat (sql, "CONSTRAINT fk_osm_waynoderefs FOREIGN KEY (way_id) ");
+    strcat (sql, "REFERENCES osm_ways (way_id))\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_way_refs' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating an index supporting osm_way_refs.node_id */
+    strcpy (sql, "CREATE INDEX idx_osm_ref_way ON osm_way_refs (node_id)");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE INDEX 'idx_osm_node_way' error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" relations */
+    strcpy (sql, "CREATE TABLE osm_relations (\n");
+    strcat (sql, "rel_id INTEGER NOT NULL PRIMARY KEY,\n");
+    strcat (sql, "version INTEGER,\n");
+    strcat (sql, "timestamp TEXT,\n");
+    strcat (sql, "uid INTEGER,\n");
+    strcat (sql, "user TEXT,\n");
+    strcat (sql, "changeset INTEGER,\n");
+    strcat (sql, "filtered INTEGER NOT NULL)\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_relations' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" relation tags */
+    strcpy (sql, "CREATE TABLE osm_relation_tags (\n");
+    strcat (sql, "rel_id INTEGER NOT NULL,\n");
+    strcat (sql, "sub INTEGER NOT NULL,\n");
+    strcat (sql, "k TEXT,\n");
+    strcat (sql, "v TEXT,\n");
+    strcat (sql, "CONSTRAINT pk_osm_reltags PRIMARY KEY (rel_id, sub),\n");
+    strcat (sql, "CONSTRAINT fk_osm_reltags FOREIGN KEY (rel_id) ");
+    strcat (sql, "REFERENCES osm_relations (rel_id))\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_relation_tags' error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating the OSM "raw" relation-node refs */
+    strcpy (sql, "CREATE TABLE osm_relation_refs (\n");
+    strcat (sql, "rel_id INTEGER NOT NULL,\n");
+    strcat (sql, "sub INTEGER NOT NULL,\n");
+    strcat (sql, "type TEXT NOT NULL,\n");
+    strcat (sql, "ref INTEGER NOT NULL,\n");
+    strcat (sql, "role TEXT,");
+    strcat (sql, "CONSTRAINT pk_osm_relnoderefs PRIMARY KEY (rel_id, sub),\n");
+    strcat (sql, "CONSTRAINT fk_osm_relnoderefs FOREIGN KEY (rel_id) ");
+    strcat (sql, "REFERENCES osm_relations (rel_id))\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'osm_relation_refs' error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+/* creating an index supporting osm_relation_refs.ref */
+    strcpy (sql,
+	    "CREATE INDEX idx_osm_ref_relation ON osm_relation_refs (type, ref)");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE INDEX 'idx_osm_relation' error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+
+/* creating the OSM db settings */
+    strcpy (sql, "CREATE TABLE settings (\n");
+    strcat (sql, "key TEXT NOT NULL UNIQUE,\n");
+    strcat (sql, "value TEXT)\n");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "CREATE TABLE 'settings' error: %s\n",
+		   err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+    strcpy (sql,
+	    "INSERT INTO settings (key, value) VALUES ('DBVersion', '1')");
+    ret = sqlite3_exec (db_handle, sql, NULL, NULL, &err_msg);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "INSERT into 'settings' error: %s\n", err_msg);
+	  sqlite3_free (err_msg);
+	  sqlite3_close (db_handle);
+	  return;
+      }
+    //db_ver = 1;
+
+    *handle = db_handle;
+    return;
+
+  unknown:
+    if (db_handle)
+	sqlite3_close (db_handle);
+    fprintf (stderr, "DB '%s'\n", path);
+    fprintf (stderr, "doesn't seems to contain valid Spatial Metadata ...\n\n");
+    fprintf (stderr, "Please, initialize Spatial Metadata\n\n");
+    return;
+}
 
 
