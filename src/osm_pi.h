@@ -78,6 +78,28 @@ class OsmDlg;
 WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
 //WX_DEFINE_ARRAY(double, NodeRefList);
 
+struct aux_params
+{
+/* an auxiliary struct used for XML parsing */
+    sqlite3 *db_handle;
+    sqlite3_stmt *ins_nodes_stmt;
+    sqlite3_stmt *ins_node_tags_stmt;
+    sqlite3_stmt *ins_ways_stmt;
+    sqlite3_stmt *ins_way_tags_stmt;
+    sqlite3_stmt *ins_way_refs_stmt;
+    sqlite3_stmt *ins_relations_stmt;
+    sqlite3_stmt *ins_relation_tags_stmt;
+    sqlite3_stmt *ins_relation_refs_stmt;
+    int wr_nodes;
+    int wr_node_tags;
+    int wr_ways;
+    int wr_way_tags;
+    int wr_way_refs;
+    int wr_relations;
+    int wr_rel_tags;
+    int wr_rel_refs;
+};
+
 class osm_pi : public opencpn_plugin_18
 {
 public:
@@ -157,27 +179,6 @@ private:
     int		          OnDownloadComplete();
 
     static const char *m_osm_path;
-    struct aux_params
-    {
-    /* an auxiliary struct used for XML parsing */
-        sqlite3 *db_handle;
-        sqlite3_stmt *ins_nodes_stmt;
-        sqlite3_stmt *ins_node_tags_stmt;
-        sqlite3_stmt *ins_ways_stmt;
-        sqlite3_stmt *ins_way_tags_stmt;
-        sqlite3_stmt *ins_way_refs_stmt;
-        sqlite3_stmt *ins_relations_stmt;
-        sqlite3_stmt *ins_relation_tags_stmt;
-        sqlite3_stmt *ins_relation_refs_stmt;
-        int wr_nodes;
-        int wr_node_tags;
-        int wr_ways;
-        int wr_way_tags;
-        int wr_way_refs;
-        int wr_relations;
-        int wr_rel_tags;
-        int wr_rel_refs;
-    };
     struct aux_params m_params;
       
     static int consume_node (const void *user_data, const readosm_node * node);
