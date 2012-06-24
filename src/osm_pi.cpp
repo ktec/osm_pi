@@ -171,7 +171,8 @@ bool osm_pi::DeInit(void)
     }
     SaveConfig();
 /* closing the DB connection */
-    sqlite3_close (m_database);
+    if (m_database)
+        sqlite3_close (m_database);
     spatialite_cleanup();
     return true;
 }
@@ -458,7 +459,6 @@ int osm_pi::OnDownloadComplete()
         wxLogMessage (_T("OSM_PI: Cant open file"));
         fprintf (stderr, "cannot open %s\n", m_osm_path);
         finalize_sql_stmts (&params);
-        sqlite3_close (m_database);
         readosm_close (osm_handle);
         return -1;
     }
@@ -470,7 +470,6 @@ int osm_pi::OnDownloadComplete()
 //        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), m_osm_path);
         fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
         finalize_sql_stmts (&params);
-        sqlite3_close (m_database);
         readosm_close (osm_handle);
         return -1;
 	}
@@ -1081,7 +1080,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "cannot open '%s': %s\n", path,
 		   sqlite3_errmsg (db_handle));
-	  sqlite3_close (db_handle);
 	  return;
       }
       
@@ -1185,7 +1183,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_nodes' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
     strcpy (sql,
@@ -1195,7 +1192,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_nodes' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" node tags */
@@ -1212,7 +1208,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_node_tags' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" ways */
@@ -1229,7 +1224,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_ways' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" way tags */
@@ -1246,7 +1240,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_way_tags' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" way-node refs */
@@ -1262,7 +1255,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_way_refs' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating an index supporting osm_way_refs.node_id */
@@ -1273,7 +1265,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
 	  fprintf (stderr, "CREATE INDEX 'idx_osm_node_way' error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" relations */
@@ -1290,7 +1281,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "CREATE TABLE 'osm_relations' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" relation tags */
@@ -1308,7 +1298,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
 	  fprintf (stderr, "CREATE TABLE 'osm_relation_tags' error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating the OSM "raw" relation-node refs */
@@ -1327,7 +1316,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
 	  fprintf (stderr, "CREATE TABLE 'osm_relation_refs' error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 /* creating an index supporting osm_relation_refs.ref */
@@ -1339,7 +1327,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
 	  fprintf (stderr, "CREATE INDEX 'idx_osm_relation' error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
 
@@ -1353,7 +1340,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
 	  fprintf (stderr, "CREATE TABLE 'settings' error: %s\n",
 		   err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
     strcpy (sql,
@@ -1363,7 +1349,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
       {
 	  fprintf (stderr, "INSERT into 'settings' error: %s\n", err_msg);
 	  sqlite3_free (err_msg);
-	  sqlite3_close (db_handle);
 	  return;
       }
     //db_ver = 1;
@@ -1372,8 +1357,6 @@ void osm_pi::open_db (const char *path, sqlite3 ** handle, int cache_size)
     return;
 
   unknown:
-    if (db_handle)
-	sqlite3_close (db_handle);
     fprintf (stderr, "DB '%s'\n", path);
     fprintf (stderr, "doesn't seems to contain valid Spatial Metadata ...\n\n");
     fprintf (stderr, "Please, initialize Spatial Metadata\n\n");
