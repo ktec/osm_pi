@@ -77,14 +77,6 @@ osm_pi::osm_pi(void *ppimgr)
 
 int osm_pi::Init(void)
 {
-//    int db_ver = 1;
-    spatialite_init(0);
-/* opening the DB */
-    int cache_size = 0;
-    open_db (m_dbpath.mb_str(), &m_database, cache_size);
-    
-    err_msg = NULL;
-    wxString sql;
 
     m_bshuttingDown = false;
     m_lat = 999.0;
@@ -135,6 +127,43 @@ int osm_pi::Init(void)
 #endif
 
     wxLogMessage (_T("OSM_PI: Database path %s"), m_dbpath.c_str());
+
+//    int db_ver = 1;
+    spatialite_init(0);
+/* opening the DB */
+    int cache_size = 0;
+    open_db (m_dbpath.mb_str(), &m_database, cache_size);
+
+/* initializing the aux-structs */
+    m_params.db_handle = NULL;
+    m_params.ins_nodes_stmt = NULL;
+    m_params.ins_node_tags_stmt = NULL;
+    m_params.ins_ways_stmt = NULL;
+    m_params.ins_way_tags_stmt = NULL;
+    m_params.ins_way_refs_stmt = NULL;
+    m_params.ins_relations_stmt = NULL;
+    m_params.ins_relation_tags_stmt = NULL;
+    m_params.ins_relation_refs_stmt = NULL;
+    m_params.wr_nodes = 0;
+    m_params.wr_node_tags = 0;
+    m_params.wr_ways = 0;
+    m_params.wr_way_tags = 0;
+    m_params.wr_way_refs = 0;
+    m_params.wr_relations = 0;
+    m_params.wr_rel_tags = 0;
+    m_params.wr_rel_refs = 0;
+
+    err_msg = NULL;
+    wxString sql;
+
+    if (!m_database)
+	return -1;
+    m_params.db_handle = m_database;
+
+    int journal_off = 0;
+/* creating SQL prepared statements */
+    create_sql_stmts (&m_params, journal_off);
+
 
       //    This PlugIn needs a toolbar icon, so request its insertion
     m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, 
@@ -423,35 +452,8 @@ int osm_pi::OnDownloadComplete()
     wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
     //sqlite3 *handle;
     //const char *osm_path = NULL;
-    int journal_off = 0;
     //struct aux_params params;
     const void *osm_handle;
-
-/* initializing the aux-structs */
-    m_params.db_handle = NULL;
-    m_params.ins_nodes_stmt = NULL;
-    m_params.ins_node_tags_stmt = NULL;
-    m_params.ins_ways_stmt = NULL;
-    m_params.ins_way_tags_stmt = NULL;
-    m_params.ins_way_refs_stmt = NULL;
-    m_params.ins_relations_stmt = NULL;
-    m_params.ins_relation_tags_stmt = NULL;
-    m_params.ins_relation_refs_stmt = NULL;
-    m_params.wr_nodes = 0;
-    m_params.wr_node_tags = 0;
-    m_params.wr_ways = 0;
-    m_params.wr_way_tags = 0;
-    m_params.wr_way_refs = 0;
-    m_params.wr_relations = 0;
-    m_params.wr_rel_tags = 0;
-    m_params.wr_rel_refs = 0;
-
-    if (!m_database)
-	return -1;
-    m_params.db_handle = m_database;
-
-/* creating SQL prepared statements */
-    create_sql_stmts (&m_params, journal_off);
 
 /* parsing the input OSM-file */
     if (readosm_open (m_osm_path, &osm_handle) != READOSM_OK)
