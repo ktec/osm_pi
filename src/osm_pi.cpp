@@ -424,69 +424,69 @@ int osm_pi::OnDownloadComplete()
     //sqlite3 *handle;
     //const char *osm_path = NULL;
     int journal_off = 0;
-    struct aux_params params;
+    //struct aux_params params;
     const void *osm_handle;
 
 /* initializing the aux-structs */
-    params.db_handle = NULL;
-    params.ins_nodes_stmt = NULL;
-    params.ins_node_tags_stmt = NULL;
-    params.ins_ways_stmt = NULL;
-    params.ins_way_tags_stmt = NULL;
-    params.ins_way_refs_stmt = NULL;
-    params.ins_relations_stmt = NULL;
-    params.ins_relation_tags_stmt = NULL;
-    params.ins_relation_refs_stmt = NULL;
-    params.wr_nodes = 0;
-    params.wr_node_tags = 0;
-    params.wr_ways = 0;
-    params.wr_way_tags = 0;
-    params.wr_way_refs = 0;
-    params.wr_relations = 0;
-    params.wr_rel_tags = 0;
-    params.wr_rel_refs = 0;
+    m_params.db_handle = NULL;
+    m_params.ins_nodes_stmt = NULL;
+    m_params.ins_node_tags_stmt = NULL;
+    m_params.ins_ways_stmt = NULL;
+    m_params.ins_way_tags_stmt = NULL;
+    m_params.ins_way_refs_stmt = NULL;
+    m_params.ins_relations_stmt = NULL;
+    m_params.ins_relation_tags_stmt = NULL;
+    m_params.ins_relation_refs_stmt = NULL;
+    m_params.wr_nodes = 0;
+    m_params.wr_node_tags = 0;
+    m_params.wr_ways = 0;
+    m_params.wr_way_tags = 0;
+    m_params.wr_way_refs = 0;
+    m_params.wr_relations = 0;
+    m_params.wr_rel_tags = 0;
+    m_params.wr_rel_refs = 0;
 
     if (!m_database)
 	return -1;
-    params.db_handle = m_database;
+    m_params.db_handle = m_database;
 
 /* creating SQL prepared statements */
-    create_sql_stmts (&params, journal_off);
+    create_sql_stmts (&m_params, journal_off);
 
 /* parsing the input OSM-file */
     if (readosm_open (m_osm_path, &osm_handle) != READOSM_OK)
     {
         wxLogMessage (_T("OSM_PI: Cant open file"));
         fprintf (stderr, "cannot open %s\n", m_osm_path);
-        finalize_sql_stmts (&params);
+        finalize_sql_stmts (&m_params);
         readosm_close (osm_handle);
         return -1;
     }
 
     if (readosm_parse
-	(osm_handle, &params, consume_node, consume_way,
+	(osm_handle, &m_params, consume_node, consume_way,
 	    consume_relation) != READOSM_OK)
     {
 //        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), m_osm_path);
         fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
-        finalize_sql_stmts (&params);
+        finalize_sql_stmts (&m_params);
         readosm_close (osm_handle);
         return -1;
 	}
     readosm_close (osm_handle);
 
 /* finalizing SQL prepared statements */
-    finalize_sql_stmts (&params);
+    finalize_sql_stmts (&m_params);
 
 /* printing out statistics */
-    printf ("inserted %d nodes\n", params.wr_nodes);
-    printf ("\t%d tags\n", params.wr_node_tags);
-    printf ("inserted %d ways\n", params.wr_ways);
-    printf ("\t%d tags\n", params.wr_way_tags);
-    printf ("\t%d node-refs\n", params.wr_way_refs);
-    printf ("inserted %d relations\n", params.wr_relations);
-    printf ("\t%d tags\n", params.wr_rel_tags);
-    printf ("\t%d refs\n", params.wr_rel_refs);
+    printf ("inserted %d nodes\n", m_params.wr_nodes);
+    printf ("\t%d tags\n", m_params.wr_node_tags);
+    printf ("inserted %d ways\n", m_params.wr_ways);
+    printf ("\t%d tags\n", m_params.wr_way_tags);
+    printf ("\t%d node-refs\n", m_params.wr_way_refs);
+    printf ("inserted %d relations\n", m_params.wr_relations);
+    printf ("\t%d tags\n", m_params.wr_rel_tags);
+    printf ("\t%d refs\n", m_params.wr_rel_refs);
 
     return 0;
 }

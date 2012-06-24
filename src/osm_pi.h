@@ -178,6 +178,7 @@ private:
         int wr_rel_tags;
         int wr_rel_refs;
     };
+    struct aux_params m_params;
       
     static int consume_node (const void *user_data, const readosm_node * node);
     static int consume_way (const void *user_data, const readosm_way * way);
