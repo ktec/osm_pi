@@ -188,7 +188,8 @@ private:
     static int insert_way (struct aux_params *params, const readosm_way * way);
     static int insert_relation (struct aux_params *params, const readosm_relation * relation);
 
-
+    static void begin_sql_transaction (struct aux_params *params);
+    static void commit_sql_transaction (struct aux_params *params);
     static void finalize_sql_stmts (struct aux_params *params);
     static void create_sql_stmts (struct aux_params *params, int journal_off);
     static void spatialite_autocreate (sqlite3 * db);

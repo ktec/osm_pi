@@ -164,7 +164,6 @@ int osm_pi::Init(void)
 /* creating SQL prepared statements */
     create_sql_stmts (&m_params, journal_off);
 
-
       //    This PlugIn needs a toolbar icon, so request its insertion
     m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, 
         wxITEM_NORMAL,_("OpenSeaMap"), _T(""), NULL,
@@ -199,6 +198,9 @@ bool osm_pi::DeInit(void)
         m_pOsmDialog = NULL;
     }
     SaveConfig();
+/* finalizing SQL prepared statements */
+    finalize_sql_stmts (&m_params);
+    
 /* closing the DB connection */
     if (m_database)
         sqlite3_close (m_database);
@@ -460,10 +462,11 @@ int osm_pi::OnDownloadComplete()
     {
         wxLogMessage (_T("OSM_PI: Cant open file"));
         fprintf (stderr, "cannot open %s\n", m_osm_path);
-        finalize_sql_stmts (&m_params);
         readosm_close (osm_handle);
         return -1;
     }
+
+    // begin transaction
 
     if (readosm_parse
 	(osm_handle, &m_params, consume_node, consume_way,
@@ -471,14 +474,13 @@ int osm_pi::OnDownloadComplete()
     {
 //        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), m_osm_path);
         fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
-        finalize_sql_stmts (&m_params);
+        commit_sql_transaction (&m_params);
         readosm_close (osm_handle);
         return -1;
 	}
     readosm_close (osm_handle);
 
-/* finalizing SQL prepared statements */
-    finalize_sql_stmts (&m_params);
+    commit_sql_transaction (&m_params);
 
 /* printing out statistics */
     printf ("inserted %d nodes\n", m_params.wr_nodes);
@@ -820,11 +822,39 @@ int osm_pi::insert_relation (struct aux_params *params, const readosm_relation *
     return 1;
 }
 
+void osm_pi::begin_sql_transaction (struct aux_params *params)
+{
+    wxLogMessage (_T("OSM_PI: begin_sql_transaction"));
+    int ret;
+    char *sql_err = NULL;
+/* the complete operation is handled as an unique SQL Transaction */
+    ret = sqlite3_exec (params->db_handle, "BEGIN", NULL, NULL, &sql_err);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "BEGIN TRANSACTION error: %s\n", sql_err);
+	  sqlite3_free (sql_err);
+	  return;
+      }
+}
+
+void osm_pi::commit_sql_transaction (struct aux_params *params)
+{
+    wxLogMessage (_T("OSM_PI: commit_sql_transaction"));
+    int ret;
+    char *sql_err = NULL;
+/* committing the still pending SQL Transaction */
+    ret = sqlite3_exec (params->db_handle, "COMMIT", NULL, NULL, &sql_err);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "COMMIT TRANSACTION error: %s\n", sql_err);
+	  sqlite3_free (sql_err);
+	  return;
+      }
+}
+
 void osm_pi::finalize_sql_stmts (struct aux_params *params)
 {
     wxLogMessage (_T("OSM_PI: finalize_sql_stmts"));
-    int ret;
-    char *sql_err = NULL;
 
     if (params->ins_nodes_stmt != NULL)
     	sqlite3_finalize (params->ins_nodes_stmt);
@@ -843,14 +873,6 @@ void osm_pi::finalize_sql_stmts (struct aux_params *params)
     if (params->ins_relation_refs_stmt != NULL)
     	sqlite3_finalize (params->ins_relation_refs_stmt);
 
-/* committing the still pending SQL Transaction */
-    ret = sqlite3_exec (params->db_handle, "COMMIT", NULL, NULL, &sql_err);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "COMMIT TRANSACTION error: %s\n", sql_err);
-	  sqlite3_free (sql_err);
-	  return;
-      }
 }
 
 void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
@@ -883,14 +905,8 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
 	    }
       }
 
-/* the complete operation is handled as an unique SQL Transaction */
-    ret = sqlite3_exec (params->db_handle, "BEGIN", NULL, NULL, &sql_err);
-    if (ret != SQLITE_OK)
-      {
-	  fprintf (stderr, "BEGIN TRANSACTION error: %s\n", sql_err);
-	  sqlite3_free (sql_err);
-	  return;
-      }
+    begin_sql_transaction (params);
+
     strcpy (sql,
 	    "INSERT OR REPLACE INTO osm_nodes (node_id, version, timestamp, uid, user, changeset, filtered, Geometry) ");
     strcat (sql, "VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
@@ -901,7 +917,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql, "INSERT OR REPLACE INTO osm_node_tags (node_id, sub, k, v) ");
@@ -913,7 +929,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql,
@@ -926,7 +942,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql, "INSERT OR REPLACE INTO osm_way_tags (way_id, sub, k, v) ");
@@ -938,7 +954,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql, "INSERT OR REPLACE INTO osm_way_refs (way_id, sub, node_id) ");
@@ -950,7 +966,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql,
@@ -963,7 +979,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql, "INSERT OR REPLACE INTO osm_relation_tags (rel_id, sub, k, v) ");
@@ -975,7 +991,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
     strcpy (sql,
@@ -988,9 +1004,11 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
       {
 	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
 		   sqlite3_errmsg (params->db_handle));
-	  finalize_sql_stmts (params);
+	  commit_sql_transaction (params);
 	  return;
       }
+
+    commit_sql_transaction (params);
 
     params->ins_nodes_stmt = ins_nodes_stmt;
     params->ins_node_tags_stmt = ins_node_tags_stmt;
