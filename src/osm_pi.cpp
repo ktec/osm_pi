@@ -136,6 +136,7 @@ int osm_pi::Init(void)
 
 /* initializing the aux-structs */
     m_params.db_handle = NULL;
+    m_params.select_nodes_stmt = NULL;
     m_params.ins_nodes_stmt = NULL;
     m_params.ins_node_tags_stmt = NULL;
     m_params.ins_ways_stmt = NULL;
@@ -321,7 +322,8 @@ bool osm_pi::SaveConfig(void)
 
 void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 {
-    OsmCfgDlg *dialog = new OsmCfgDlg( parent, wxID_ANY, _("OSM Preferences"), wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxDefaultSize, wxDEFAULT_DIALOG_STYLE );
+    OsmCfgDlg *dialog = new OsmCfgDlg( parent, wxID_ANY, _("OSM Preferences"), 
+        wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxDefaultSize, wxDEFAULT_DIALOG_STYLE );
     dialog->Fit();
     wxColour cl;
     DimeWindow(dialog);
@@ -368,6 +370,11 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
     separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
     shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
     */
+
+    select_nodes (&m_params, 
+        (double) m_pastVp.lat_min, (double) m_pastVp.lon_min, 
+        (double) m_pastVp.lat_max, (double) m_pastVp.lon_max);
+    
 
     // TODO: Query local database for seamarks
 }
@@ -527,6 +534,35 @@ int osm_pi::consume_relation (const void *user_data, const readosm_relation * re
     if (!insert_relation (params, relation))
     	return READOSM_ABORT;
     return READOSM_OK;
+}
+
+int osm_pi::select_nodes (struct aux_params *params, 
+    double lat, double lon, double lat_max, double lon_max )
+{
+    wxLogMessage (_T("OSM_PI: select_node"));
+    int ret;
+    sqlite3_reset (params->select_nodes_stmt);
+    sqlite3_clear_bindings (params->select_nodes_stmt);
+	sqlite3_bind_double (params->select_nodes_stmt, 1, (float)lon);
+	sqlite3_bind_double (params->select_nodes_stmt, 2, (float)lat);
+	sqlite3_bind_double (params->select_nodes_stmt, 3, (float)lon_max);
+	sqlite3_bind_double (params->select_nodes_stmt, 4, (float)lat_max);
+    ret = sqlite3_step (params->select_nodes_stmt);
+    while (ret == SQLITE_ROW) {
+	    const long long id = sqlite3_column_int64(params->select_nodes_stmt, 0);
+	    const double latitude = sqlite3_column_double(params->select_nodes_stmt, 2);
+	    const double longitude = sqlite3_column_double(params->select_nodes_stmt, 3);
+        wxLogMessage (_T("OSM_PI: sqlite3_step() row: %lli, %f, %f"), id, latitude, longitude);
+        ret = sqlite3_step (params->select_nodes_stmt);
+    }
+    if (ret == SQLITE_DONE)
+	;
+    else
+      {
+	  fprintf (stderr, "sqlite3_step() error: SELECT osm_nodes\n");
+	  return 0;
+      }
+    return 1;
 }
 
 int osm_pi::insert_node (struct aux_params *params, const readosm_node * node)
@@ -881,6 +917,7 @@ void osm_pi::finalize_sql_stmts (struct aux_params *params)
 void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
 {
     wxLogMessage (_T("OSM_PI: create_sql_stmts"));
+    sqlite3_stmt *select_nodes_stmt;
     sqlite3_stmt *ins_nodes_stmt;
     sqlite3_stmt *ins_node_tags_stmt;
     sqlite3_stmt *ins_ways_stmt;
@@ -910,6 +947,20 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
 
     begin_sql_transaction (params);
 
+    strcpy (sql,
+	    "SELECT n.node_id, n.timestamp, X(Geometry), Y(Geometry), t.* ");
+    strcat (sql, "FROM osm_nodes AS n JOIN osm_node_tags AS t ON (t.node_id = n.node_id) ");
+    strcat (sql, "WHERE k='seamark:type' AND MBRContains(BuildMBR(?, ?, ?, ?), Geometry)");
+    ret =
+	sqlite3_prepare_v2 (params->db_handle, sql, strlen (sql),
+			    &select_nodes_stmt, NULL);
+    if (ret != SQLITE_OK)
+      {
+	  fprintf (stderr, "SQL error: %s\n%s\n", sql,
+		   sqlite3_errmsg (params->db_handle));
+	  commit_sql_transaction (params);
+	  return;
+      }
     strcpy (sql,
 	    "INSERT OR REPLACE INTO osm_nodes (node_id, version, timestamp, uid, user, changeset, filtered, Geometry) ");
     strcat (sql, "VALUES (?, ?, ?, ?, ?, ?, 0, ?)");
@@ -1013,6 +1064,7 @@ void osm_pi::create_sql_stmts (struct aux_params *params, int journal_off)
 
     commit_sql_transaction (params);
 
+    params->select_nodes_stmt = select_nodes_stmt;
     params->ins_nodes_stmt = ins_nodes_stmt;
     params->ins_node_tags_stmt = ins_node_tags_stmt;
     params->ins_ways_stmt = ins_ways_stmt;

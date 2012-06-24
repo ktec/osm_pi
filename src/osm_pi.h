@@ -82,6 +82,7 @@ struct aux_params
 {
 /* an auxiliary struct used for XML parsing */
     sqlite3 *db_handle;
+    sqlite3_stmt *select_nodes_stmt;
     sqlite3_stmt *ins_nodes_stmt;
     sqlite3_stmt *ins_node_tags_stmt;
     sqlite3_stmt *ins_ways_stmt;
@@ -188,6 +189,9 @@ private:
     static int insert_node (struct aux_params *params, const readosm_node * node);
     static int insert_way (struct aux_params *params, const readosm_way * way);
     static int insert_relation (struct aux_params *params, const readosm_relation * relation);
+
+    static int select_nodes (struct aux_params *params, 
+        double lat, double lon, double lat_max, double lon_max);
 
     static void begin_sql_transaction (struct aux_params *params);
     static void commit_sql_transaction (struct aux_params *params);
