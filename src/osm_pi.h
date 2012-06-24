@@ -177,9 +177,9 @@ private:
     wxString          m_api_url;
     
     int		          OnDownloadComplete();
+    struct aux_params m_params;
 
     static const char *m_osm_path;
-    struct aux_params m_params;
       
     static int consume_node (const void *user_data, const readosm_node * node);
     static int consume_way (const void *user_data, const readosm_way * way);

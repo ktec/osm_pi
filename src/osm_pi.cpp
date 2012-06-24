@@ -467,7 +467,9 @@ int osm_pi::OnDownloadComplete()
     }
 
     // begin transaction
+    begin_sql_transaction (&m_params);
 
+    wxLogMessage (_T("OSM_PI: Starting osm file parse operation..."));
     if (readosm_parse
 	(osm_handle, &m_params, consume_node, consume_way,
 	    consume_relation) != READOSM_OK)
@@ -480,6 +482,7 @@ int osm_pi::OnDownloadComplete()
 	}
     readosm_close (osm_handle);
 
+    wxLogMessage (_T("OSM_PI: Osm file parse complete..."));
     commit_sql_transaction (&m_params);
 
 /* printing out statistics */
