@@ -488,7 +488,6 @@ int osm_pi::OnDownloadComplete()
     printf ("inserted %d relations\n", params.wr_relations);
     printf ("\t%d tags\n", params.wr_rel_tags);
     printf ("\t%d refs\n", params.wr_rel_refs);
-    printf ("Into database: %s\n", m_dbpath.c_str());
 
     return 0;
 }
