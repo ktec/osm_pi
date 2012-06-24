@@ -827,21 +827,21 @@ void osm_pi::finalize_sql_stmts (struct aux_params *params)
     char *sql_err = NULL;
 
     if (params->ins_nodes_stmt != NULL)
-	sqlite3_finalize (params->ins_nodes_stmt);
+    	sqlite3_finalize (params->ins_nodes_stmt);
     if (params->ins_node_tags_stmt != NULL)
-	sqlite3_finalize (params->ins_node_tags_stmt);
+    	sqlite3_finalize (params->ins_node_tags_stmt);
     if (params->ins_ways_stmt != NULL)
-	sqlite3_finalize (params->ins_ways_stmt);
+    	sqlite3_finalize (params->ins_ways_stmt);
     if (params->ins_way_tags_stmt != NULL)
-	sqlite3_finalize (params->ins_way_tags_stmt);
+    	sqlite3_finalize (params->ins_way_tags_stmt);
     if (params->ins_way_refs_stmt != NULL)
-	sqlite3_finalize (params->ins_way_refs_stmt);
+    	sqlite3_finalize (params->ins_way_refs_stmt);
     if (params->ins_relations_stmt != NULL)
-	sqlite3_finalize (params->ins_relations_stmt);
+    	sqlite3_finalize (params->ins_relations_stmt);
     if (params->ins_relation_tags_stmt != NULL)
-	sqlite3_finalize (params->ins_relation_tags_stmt);
+    	sqlite3_finalize (params->ins_relation_tags_stmt);
     if (params->ins_relation_refs_stmt != NULL)
-	sqlite3_finalize (params->ins_relation_refs_stmt);
+    	sqlite3_finalize (params->ins_relation_refs_stmt);
 
 /* committing the still pending SQL Transaction */
     ret = sqlite3_exec (params->db_handle, "COMMIT", NULL, NULL, &sql_err);
