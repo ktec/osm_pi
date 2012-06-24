@@ -79,6 +79,10 @@ int osm_pi::Init(void)
 {
 //    int db_ver = 1;
     spatialite_init(0);
+/* opening the DB */
+    int cache_size = 0;
+    open_db (m_dbpath.mb_str(), &m_database, cache_size);
+    
     err_msg = NULL;
     wxString sql;
 
@@ -166,8 +170,9 @@ bool osm_pi::DeInit(void)
         m_pOsmDialog = NULL;
     }
     SaveConfig();
-    //sqlite3_close (m_database);
-    //spatialite_cleanup();
+/* closing the DB connection */
+    sqlite3_close (m_database);
+    spatialite_cleanup();
     return true;
 }
 
@@ -415,9 +420,8 @@ void osm_pi::DownloadUrl(wxString url)
 int osm_pi::OnDownloadComplete()
 {
     wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
-    sqlite3 *handle;
+    //sqlite3 *handle;
     //const char *osm_path = NULL;
-    int cache_size = 0;
     int journal_off = 0;
     struct aux_params params;
     const void *osm_handle;
@@ -441,11 +445,9 @@ int osm_pi::OnDownloadComplete()
     params.wr_rel_tags = 0;
     params.wr_rel_refs = 0;
 
-/* opening the DB */
-    open_db (m_dbpath.mb_str(), &handle, cache_size);
-    if (!handle)
+    if (!m_database)
 	return -1;
-    params.db_handle = handle;
+    params.db_handle = m_database;
 
 /* creating SQL prepared statements */
     create_sql_stmts (&params, journal_off);
@@ -456,7 +458,7 @@ int osm_pi::OnDownloadComplete()
         wxLogMessage (_T("OSM_PI: Cant open file"));
         fprintf (stderr, "cannot open %s\n", m_osm_path);
         finalize_sql_stmts (&params);
-        sqlite3_close (handle);
+        sqlite3_close (m_database);
         readosm_close (osm_handle);
         return -1;
     }
@@ -468,7 +470,7 @@ int osm_pi::OnDownloadComplete()
 //        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), m_osm_path);
         fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
         finalize_sql_stmts (&params);
-        sqlite3_close (handle);
+        sqlite3_close (m_database);
         readosm_close (osm_handle);
         return -1;
 	}
@@ -488,8 +490,6 @@ int osm_pi::OnDownloadComplete()
     printf ("\t%d refs\n", params.wr_rel_refs);
     printf ("Into database: %s\n", m_dbpath.c_str());
 
-/* closing the DB connection */
-    sqlite3_close (handle);
     return 0;
 }
 
