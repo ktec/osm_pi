@@ -1,5 +1,5 @@
 /******************************************************************************
- * $Id: osm_pi.cpp,v 1.0 2011/02/26 01:54:37 nohal Exp $
+ * $Id: osm_pi.cpp,v 1.0 2011/02/26 01:54:37 ktec Exp $
  *
  * Project:  OpenCPN
  * Purpose:  OSM Plugin
@@ -371,12 +371,119 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
     shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
     */
 
-    select_nodes (&m_params, 
-        (double) m_pastVp.lat_min, (double) m_pastVp.lon_min, 
-        (double) m_pastVp.lat_max, (double) m_pastVp.lon_max);
+//    select_nodes (&m_params, 
+//        (double) m_pastVp.lat_min, (double) m_pastVp.lon_min, 
+//        (double) m_pastVp.lat_max, (double) m_pastVp.lon_max);
     
 
     // TODO: Query local database for seamarks
+}
+
+void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask )
+{
+    wxLogMessage (_T("OSM_PI: DoDrawBitmap %i,%i"),x,y);
+
+      if ( m_pdc ) {
+            m_pdc->DrawBitmap( bitmap, x, y, usemask );
+      } else {
+            // GL doesn't draw anything if x<0 || y<0 so we must crop image first
+            wxBitmap bmp;
+            if ( x < 0 || y < 0 ) {
+                  int dx = (x < 0 ? -x : 0);
+                  int dy = (y < 0 ? -y : 0);
+                  int w = bitmap.GetWidth()-dx;
+                  int h = bitmap.GetHeight()-dy;
+                  /* picture is out of viewport */
+                  if ( w <= 0 || h <= 0 )
+                        return;
+                  wxBitmap newBitmap = bitmap.GetSubBitmap( wxRect( dx, dy, w, h ) );
+                  x += dx;
+                  y += dy;
+                  bmp = newBitmap;
+            } else {
+                  bmp = bitmap;
+            }
+            wxImage image = bmp.ConvertToImage();
+            int w = image.GetWidth(), h = image.GetHeight();
+
+            if ( usemask ) {
+                  unsigned char *d = image.GetData();
+                  unsigned char *a = image.GetAlpha();
+
+                  unsigned char mr, mg, mb;
+                  if( !image.GetOrFindMaskColour( &mr, &mg, &mb ) && !a )
+                        printf("trying to use mask to draw a bitmap without alpha or mask\n");
+
+                  unsigned char *e = new unsigned char[4*w*h];
+                  //               int w = image.GetWidth(), h = image.GetHeight();
+                  int sb = w*h;
+                  unsigned char r, g, b;
+                  for ( int i=0 ; i<sb ; i++ ) {
+                        r = d[i*3 + 0];
+                        g = d[i*3 + 1];
+                        b = d[i*3 + 2];
+
+                        e[i*4 + 0] = r;
+                        e[i*4 + 1] = g;
+                        e[i*4 + 2] = b;
+
+                        e[i*4 + 3] = a ? a[i] :
+                        ((r==mr)&&(g==mg)&&(b==mb) ? 0 : 255);
+                  }
+
+                  glColor4f( 1, 1, 1, 1 );
+                  glEnable( GL_BLEND );
+                  glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+                  glRasterPos2i( x, y );
+                  glPixelZoom( 1, -1 );
+                  glDrawPixels( w, h, GL_RGBA, GL_UNSIGNED_BYTE, e );
+                  glPixelZoom( 1, 1 );
+                  glDisable( GL_BLEND );
+                  free( e );
+            } else {
+                  glRasterPos2i( x, y );
+                  glPixelZoom( 1, -1 ); /* draw data from top to bottom */
+                  glDrawPixels( w, h, GL_RGB, GL_UNSIGNED_BYTE, image.GetData() );
+                  glPixelZoom( 1, 1 );
+            }
+      }
+}
+bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
+{
+    m_pdc = &dc;
+
+//    if (!b_dbUsable || !m_bRenderOverlay)
+//       return false;
+    wxLogMessage (_T("OSM_PI: RenderOverlay\n"));
+    int ret;
+    sqlite3_reset (m_params.select_nodes_stmt);
+    sqlite3_clear_bindings (m_params.select_nodes_stmt);
+	sqlite3_bind_double (m_params.select_nodes_stmt, 1, (float)m_pastVp.lon_min); // X1
+	sqlite3_bind_double (m_params.select_nodes_stmt, 2, (float)m_pastVp.lat_min); // Y1
+	sqlite3_bind_double (m_params.select_nodes_stmt, 3, (float)m_pastVp.lon_max); // X2
+	sqlite3_bind_double (m_params.select_nodes_stmt, 4, (float)m_pastVp.lat_max); // Y2
+    ret = sqlite3_step (m_params.select_nodes_stmt);
+    while (ret == SQLITE_ROW) {
+	    const long long id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
+	    const double latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
+	    const double longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
+        wxLogMessage (_T("OSM_PI: sqlite3_step() row: %lli, %f, %f"), id, latitude, longitude);
+
+        wxPoint pl;
+        GetCanvasPixLL(vp, &pl, latitude, longitude);
+        DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
+
+        ret = sqlite3_step (m_params.select_nodes_stmt);
+    }
+    if (ret == SQLITE_DONE)
+	;
+    else
+      {
+	  fprintf (stderr, "sqlite3_step() error: SELECT osm_nodes\n");
+	  return false;
+      }
+
+    return true;
 }
 
 void osm_pi::OnToolbarToolCallback(int id)

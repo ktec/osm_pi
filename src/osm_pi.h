@@ -130,7 +130,7 @@ public:
     void ShowPreferencesDialog( wxWindow* parent );
 
     //    The override PlugIn Methods
-    //      bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
+    bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
     //      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
     //    Other public methods
@@ -142,7 +142,8 @@ public:
 
 protected:
     void              DownloadUrl(wxString url);
-
+    void              DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
+    wxDC            *m_pdc;
 
 private:
 
