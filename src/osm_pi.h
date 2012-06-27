@@ -43,8 +43,6 @@
 #include <wx/event.h>
 #include <map>
 
-#include "tinyxml.h"
-
 #define     PLUGIN_VERSION_MAJOR    0
 #define     PLUGIN_VERSION_MINOR    1
 
@@ -67,6 +65,9 @@
 #define CURL_STATICLIB
 #include <curl/curl.h>
 #include <curl/easy.h>
+
+#include "osmdownloader.h"
+
 
 class OsmDlg;
 
@@ -134,11 +135,12 @@ public:
     //      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
     //    Other public methods
-    void              SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
-    void              SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
+    void SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
+    void SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
 
-    void              SetCursorLatLon(double lat, double lon);
-    void              OnOsmDialogClose();
+    void SetCursorLatLon(double lat, double lon);
+    void OnOsmDialogClose();
+    void OnDownloadComplete();
 
 protected:
     void              DownloadUrl(wxString url);
@@ -147,38 +149,37 @@ protected:
 
 private:
 
-    sqlite3          *m_database;
-    sqlite3_stmt     *m_stmt;
-    int               ret;
-    char             *err_msg;
-    bool              b_dbUsable;
+    OsmDownloader *m_pDownloader;
 
-    wxFileConfig     *m_pconfig;
-    wxWindow         *m_parent_window;
-    bool              LoadConfig(void);
-    bool              SaveConfig(void);
+    sqlite3 *m_database;
+    sqlite3_stmt *m_stmt;
+    int ret;
+    char *err_msg;
+    bool b_dbUsable;
 
-    double            m_lat, m_lon;
-    wxDateTime        m_lastPosReport;
+    wxFileConfig *m_pconfig;
+    wxWindow *m_parent_window;
+    bool LoadConfig(void);
+    bool SaveConfig(void);
 
-    OsmDlg            *m_pOsmDialog;
+    double m_lat, m_lon;
+    wxDateTime m_lastPosReport;
 
-    int               m_osm_dialog_x, m_osm_dialog_y;
-    int               m_display_width, m_display_height;
-    bool              m_bRenderOverlay;
-    int               m_iOpacity;
-    int               m_iUnits;
-    wxString          m_dbpath;
+    OsmDlg *m_pOsmDialog;
 
-    int               m_leftclick_tool_id;
+    int m_osm_dialog_x, m_osm_dialog_y;
+    int m_display_width, m_display_height;
+    bool m_bRenderOverlay;
+    int m_iOpacity;
+    int m_iUnits;
+    wxString m_dbpath;
 
-    bool              m_bshuttingDown;
-
-    short             mPriPosition;
-    PlugIn_ViewPort   m_pastVp;
-    wxString          m_api_url;
+    int m_leftclick_tool_id;
+    bool m_bshuttingDown;
+    short mPriPosition;
+    PlugIn_ViewPort m_pastVp;
+    wxString m_api_url;
     
-    int		          OnDownloadComplete();
     struct aux_params m_params;
 
     static const char *m_osm_path;

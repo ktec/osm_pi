@@ -128,6 +128,8 @@ int osm_pi::Init(void)
 
     wxLogMessage (_T("OSM_PI: Database path %s"), m_dbpath.c_str());
 
+    m_pDownloader = new OsmDownloader();
+    
 //    int db_ver = 1;
     spatialite_init(0);
 /* opening the DB */
@@ -199,6 +201,9 @@ bool osm_pi::DeInit(void)
         m_pOsmDialog = NULL;
     }
     SaveConfig();
+    
+    delete m_pDownloader;
+    
 /* finalizing SQL prepared statements */
     finalize_sql_stmts (&m_params);
     
@@ -500,9 +505,19 @@ void osm_pi::OnToolbarToolCallback(int id)
     */
     // TODO: this needs to show a dialog which allow the user
     // to update their local database by pressing a button? Maybe?
-    DownloadUrl(m_api_url);
-}
+    //DownloadUrl(m_api_url);
 
+    double x1 = m_pastVp.lon_min;
+    double y1 = m_pastVp.lat_min;
+    double x2 = m_pastVp.lon_max;
+    double y2 = m_pastVp.lat_max;
+    
+    bool success = m_pDownloader->Download(x1,y1,x2,y2);
+    if (success)
+    {
+        wxLogMessage (_T("OSM_PI: We have a file to play with...."));
+    }
+}
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -535,19 +550,6 @@ void osm_pi::DownloadUrl(wxString url)
         wxLogMessage (_T("OSM_PI: File downloaded"));
 	    // Download completed ok
 	    OnDownloadComplete();
-	    /*
-		TiXmlDocument doc( "/tmp/features.xml" );
-		bool loadOkay = doc.LoadFile();
-		if (loadOkay)
-		{
-		    wxLogMessage (_T("OSM_PI: Sweet!! Just downloaded this file: [%s]"), url.c_str());
-			ParseOsm(doc.FirstChildElement());
-		}
-		else
-		{
-			wxLogMessage (_T("OSM_PI: Failed to load file: /tmp/features.xml"));
-		}
-		*/
 	}
 	else
 	{
@@ -563,7 +565,7 @@ void osm_pi::DownloadUrl(wxString url)
 //
 //---------------------------------------------------------------------------------------------------------
 
-int osm_pi::OnDownloadComplete()
+void osm_pi::OnDownloadComplete()
 {
     wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
     //sqlite3 *handle;
@@ -577,7 +579,7 @@ int osm_pi::OnDownloadComplete()
         wxLogMessage (_T("OSM_PI: Cant open file"));
         fprintf (stderr, "cannot open %s\n", m_osm_path);
         readosm_close (osm_handle);
-        return -1;
+        //return -1;
     }
 
     // begin transaction
@@ -592,7 +594,7 @@ int osm_pi::OnDownloadComplete()
         fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
         commit_sql_transaction (&m_params);
         readosm_close (osm_handle);
-        return -1;
+        //return -1;
 	}
     readosm_close (osm_handle);
 
@@ -609,7 +611,7 @@ int osm_pi::OnDownloadComplete()
     printf ("\t%d tags\n", m_params.wr_rel_tags);
     printf ("\t%d refs\n", m_params.wr_rel_refs);
 
-    return 0;
+    //return 0;
 }
 
 // OSM Consumers

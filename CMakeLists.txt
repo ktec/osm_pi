@@ -61,16 +61,14 @@ INCLUDE(${wxWidgets_USE_FILE})
 
 FIND_PACKAGE(Gettext REQUIRED)
 
-IF(UNIX)
-    FIND_PACKAGE(TinyXML)
-ENDIF(UNIX)
-
 # For convenience we define the sources as a variable. You can add 
 # header files and cpp/c files and CMake will sort them out
 
 SET(SRC_OSM
     src/osm_pi.h
     src/osm_pi.cpp
+    src/osmdownloader.h
+    src/osmdownloader.cpp
     src/icons.h
     src/icons.cpp
     src/osmgui.h
@@ -85,23 +83,6 @@ SET(SRC_OSM
     src/readosm/protobuf.c
 	)
 
-SET(SRC_TINYXML
-    ../../../include/tinyxml.h
-    ../../../src/tinyxml.cpp
-    ../../../src/tinyxmlparser.cpp
-    ../../../src/tinyxmlerror.cpp
-  )
-
-IF(TINYXML_FOUND)
-    message (STATUS "Building with tinyxml includes")
-    INCLUDE_DIRECTORIES(${TINYXML_INCLUDE_DIR})
-    ADD_DEFINITIONS(-DTIXML_USE_STL)
-ELSE(TINYXML_FOUND)
-    message (STATUS "tinyxml library not found")
-    SET(SRC_OSM ${SRC_OSM} ${SRC_TINYXML})
-    ADD_DEFINITIONS(-DTIXML_USE_STL)
-ENDIF(TINYXML_FOUND)
-
 ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_OSM})
 
 IF(WIN32)
@@ -112,12 +93,7 @@ IF(WIN32)
 ENDIF(WIN32)
 
 TARGET_LINK_LIBRARIES( ${PACKAGE_NAME} ${ICONV_LIBRARIES} )
-
 TARGET_LINK_LIBRARIES( ${PACKAGE_NAME} ${wxWidgets_LIBRARIES} )
-
-IF(TINYXML_FOUND)
-   TARGET_LINK_LIBRARIES(${PACKAGE_NAME} ${TINYXML_LIBRARIES} )
-ENDIF(TINYXML_FOUND)
 
 IF(APPLE)
  FIND_PACKAGE(ZLIB REQUIRED)
