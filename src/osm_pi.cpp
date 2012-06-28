@@ -279,24 +279,6 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
         return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
     }
     m_pastVp = vp;
-
-    double x1 = m_pastVp.lon_min;
-    double y1 = m_pastVp.lat_min;
-    double x2 = m_pastVp.lon_max;
-    double y2 = m_pastVp.lat_max;
-    // TODO: Query local database for seamarks
-    std::vector<Poi> seamarks;
-    m_pOsmDb->SelectNodes(x1,y1,x2,y2,seamarks);
-
-    for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
-        wxPoint pl;
-        double lat = (*it).latitude;
-        double lon = (*it).longitude;
-        GetCanvasPixLL(&m_pastVp, &pl, lat, lon);
-        //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
-        wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
-    }
-
 }
 
 void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask )
@@ -371,38 +353,26 @@ void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool us
 bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
 {
     m_pdc = &dc;
-/*
 //    if (!b_dbUsable || !m_bRenderOverlay)
 //       return false;
-    wxLogMessage (_T("OSM_PI: RenderOverlay\n"));
-    int ret;
-    sqlite3_reset (m_params.select_nodes_stmt);
-    sqlite3_clear_bindings (m_params.select_nodes_stmt);
-	sqlite3_bind_double (m_params.select_nodes_stmt, 1, (float)m_pastVp.lon_min); // X1
-	sqlite3_bind_double (m_params.select_nodes_stmt, 2, (float)m_pastVp.lat_min); // Y1
-	sqlite3_bind_double (m_params.select_nodes_stmt, 3, (float)m_pastVp.lon_max); // X2
-	sqlite3_bind_double (m_params.select_nodes_stmt, 4, (float)m_pastVp.lat_max); // Y2
-    ret = sqlite3_step (m_params.select_nodes_stmt);
-    while (ret == SQLITE_ROW) {
-	    const long long id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
-	    const double latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
-	    const double longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
-        wxLogMessage (_T("OSM_PI: sqlite3_step() row: %lli, %f, %f"), id, latitude, longitude);
 
+    double x1 = m_pastVp.lon_min;
+    double y1 = m_pastVp.lat_min;
+    double x2 = m_pastVp.lon_max;
+    double y2 = m_pastVp.lat_max;
+    // TODO: Query local database for seamarks
+    std::vector<Poi> seamarks;
+    m_pOsmDb->SelectNodes(x1,y1,x2,y2,seamarks);
+
+    for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
         wxPoint pl;
-        GetCanvasPixLL(vp, &pl, latitude, longitude);
+        double lat = (*it).latitude;
+        double lon = (*it).longitude;
+        GetCanvasPixLL(vp, &pl, lat, lon);
         DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
-
-        ret = sqlite3_step (m_params.select_nodes_stmt);
+        wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
     }
-    if (ret == SQLITE_DONE)
-	;
-    else
-      {
-	  fprintf (stderr, "sqlite3_step() error: SELECT osm_nodes\n");
-	  return false;
-      }
-*/
+
     return true;
 }
 
