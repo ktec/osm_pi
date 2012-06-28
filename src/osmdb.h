@@ -47,6 +47,8 @@
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
 
 #define DATABASE_NAME "osm.sqlite"
+#define PROJECTION 3395
+#define SPATIAL_REFERENCE_ID 4326 // WGS 84
 
 struct aux_params
 {
@@ -81,12 +83,13 @@ class OsmDb
         // ReadOSM stuff
         struct aux_params m_params;
         void ConsumeOsm(const char *osm_path);
+        int SelectNodes (double lat, double lon, double lat_max, double lon_max);
 
     private:
 
-        static int consume_node (const void *user_data, const readosm_node * node);
-        static int consume_way (const void *user_data, const readosm_way * way);
-        static int consume_relation (const void *user_data, const readosm_relation * relation);
+        static int ConsumeNode (const void *user_data, const readosm_node * node);
+        static int ConsumeWay (const void *user_data, const readosm_way * way);
+        static int ConsumeRelation (const void *user_data, const readosm_relation * relation);
 
         // Database stuff
         wxString m_dbpath;
@@ -96,19 +99,19 @@ class OsmDb
         char *err_msg;
         bool b_dbUsable;
 
-        static int insert_node (struct aux_params *params, const readosm_node * node);
-        static int insert_way (struct aux_params *params, const readosm_way * way);
-        static int insert_relation (struct aux_params *params, const readosm_relation * relation);
+        static int InsertNode (struct aux_params *params, const readosm_node * node);
+        static int InsertWay (struct aux_params *params, const readosm_way * way);
+        static int InsertRelation (struct aux_params *params, const readosm_relation * relation);
 
-        static int select_nodes (struct aux_params *params, 
-            double lat, double lon, double lat_max, double lon_max);
+//        static sqlite3_stmt PrepareStatement (sqlite3 * db_handle, wxString sql);
+        static void CreateSqlStatements (struct aux_params *params, int journal_off);
+        static void FinalizeSqlStatements (struct aux_params *params);
+        static void GetTable(struct aux_params *params, wxString sql, 
+            char ***results, int &n_rows, int &n_columns);
+        static void Exec(sqlite3 * db_handle, wxString sql);
 
-        static void begin_sql_transaction (struct aux_params *params);
-        static void commit_sql_transaction (struct aux_params *params);
-        static void finalize_sql_stmts (struct aux_params *params);
-        static void create_sql_stmts (struct aux_params *params, int journal_off);
-        static void spatialite_autocreate (sqlite3 * db);
-        static void open_db (const char *path, sqlite3 ** handle, int cache_size);
+        static void SpatialiteAutocreate (sqlite3 * db);
+        static void OpenDb (const char *path, sqlite3 ** handle, int cache_size);
 
 };
 
