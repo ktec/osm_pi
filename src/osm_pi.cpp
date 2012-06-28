@@ -280,7 +280,23 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
     }
     m_pastVp = vp;
 
+    double x1 = m_pastVp.lon_min;
+    double y1 = m_pastVp.lat_min;
+    double x2 = m_pastVp.lon_max;
+    double y2 = m_pastVp.lat_max;
     // TODO: Query local database for seamarks
+    std::vector<Poi> seamarks;
+    m_pOsmDb->SelectNodes(x1,y1,x2,y2,seamarks);
+
+    for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
+        wxPoint pl;
+        double lat = (*it).latitude;
+        double lon = (*it).longitude;
+        GetCanvasPixLL(&m_pastVp, &pl, lat, lon);
+        //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
+        wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
+    }
+
 }
 
 void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask )

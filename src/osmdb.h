@@ -37,6 +37,7 @@
 #include <wx/fileconf.h>
 #include <wx/filename.h>
 
+#include <vector>
 //#include <readosm.h>
 #include "readosm/readosm.h"
 
@@ -73,6 +74,13 @@ struct aux_params
     int wr_rel_refs;
 };
 
+struct Poi
+{
+    long long id;
+	double latitude;
+	double longitude;
+};
+
 class OsmDb
 {
     public:
@@ -83,7 +91,7 @@ class OsmDb
         // ReadOSM stuff
         struct aux_params m_params;
         void ConsumeOsm(const char *osm_path);
-        int SelectNodes (double lat, double lon, double lat_max, double lon_max);
+        int SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features);
 
     private:
 
@@ -99,6 +107,9 @@ class OsmDb
         char *err_msg;
         bool b_dbUsable;
 
+        static bool OpenDb (const char *path, sqlite3 ** handle, int cache_size);
+        static void SpatialiteAutocreate (sqlite3 * db);
+
         static int InsertNode (struct aux_params *params, const readosm_node * node);
         static int InsertWay (struct aux_params *params, const readosm_way * way);
         static int InsertRelation (struct aux_params *params, const readosm_relation * relation);
@@ -110,8 +121,6 @@ class OsmDb
             char ***results, int &n_rows, int &n_columns);
         static void Exec(sqlite3 * db_handle, wxString sql);
 
-        static void SpatialiteAutocreate (sqlite3 * db);
-        static void OpenDb (const char *path, sqlite3 ** handle, int cache_size);
 
 };
 

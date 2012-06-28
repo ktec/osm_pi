@@ -38,13 +38,15 @@
 
 #include <wx/hashmap.h>
 #include <wx/event.h>
+
+#include <vector>
 #include <map>
 
 #define     PLUGIN_VERSION_MAJOR    0
 #define     PLUGIN_VERSION_MINOR    1
 
 #define     MY_API_VERSION_MAJOR    1
-#define     MY_API_VERSION_MINOR    8
+#define     MY_API_VERSION_MINOR    10
 
 #include "../../../include/ocpn_plugin.h"
 #include "osmgui_impl.h"

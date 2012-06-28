@@ -28,6 +28,11 @@
 
 #include "osmdb.h"
 
+
+static void profile(void *context, const char *sql, sqlite3_uint64 ns) {
+fprintf(stderr, "Query: %s\n", sql);
+fprintf(stderr, "Execution Time: %llu ms\n", ns / 1000000);}
+
 void appendOSDirSlash(wxString* pString)
 {
     wxChar sep = wxFileName::GetPathSeparator();
@@ -88,12 +93,14 @@ OsmDb::OsmDb()
     m_params.wr_rel_refs = 0;
 
 //    err_msg = NULL;
-
 //    int db_ver = 1;
     spatialite_init(0);
     // opening the DB
     int cache_size = 0;
-    OpenDb (m_dbpath.mb_str(), &m_database, cache_size);
+    b_dbUsable = OpenDb (m_dbpath.mb_str(), &m_database, cache_size);
+
+    if (!b_dbUsable)
+        wxLogMessage (_T("OSM_PI: Database Error"));
 
     //if (!m_database)
 	//return -1;
@@ -192,26 +199,44 @@ int OsmDb::ConsumeRelation (const void *user_data, const readosm_relation * rela
     return READOSM_OK;
 }
 
-int OsmDb::SelectNodes (double lat, double lon, double lat_max, double lon_max )
+int OsmDb::SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features)
 {
-    wxLogMessage (_T("OSM_PI: SelectNodes"));
-    int ret;
+    wxLogMessage (_T("OSM_PI: SelectNodes %f,%f,%f,%f"),(float)lat,(float)lon,(float)lat_max,(float)lon_max);
+    if (!b_dbUsable)
+    {
+        wxLogMessage (_T("OSM_PI: Error Database unuseable."));
+        return -1;
+    }
+
     sqlite3_reset (m_params.select_nodes_stmt);
     sqlite3_clear_bindings (m_params.select_nodes_stmt);
-	sqlite3_bind_double (m_params.select_nodes_stmt, 1, (float)lon);
-	sqlite3_bind_double (m_params.select_nodes_stmt, 2, (float)lat);
-	sqlite3_bind_double (m_params.select_nodes_stmt, 3, (float)lon_max);
-	sqlite3_bind_double (m_params.select_nodes_stmt, 4, (float)lat_max);
-    ret = sqlite3_step (m_params.select_nodes_stmt);
+    
+	sqlite3_bind_double (m_params.select_nodes_stmt, 1, (float)lat);
+	sqlite3_bind_double (m_params.select_nodes_stmt, 2, (float)lon);
+	sqlite3_bind_double (m_params.select_nodes_stmt, 3, (float)lat_max);
+	sqlite3_bind_double (m_params.select_nodes_stmt, 4, (float)lon_max);
+
+    int ret = sqlite3_step (m_params.select_nodes_stmt);
+
+    int count = 0;
+    //vector<Poi> features(1);
+
     while (ret == SQLITE_ROW) {
 	    const long long id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
 	    const double latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
 	    const double longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
+        Poi poi;
+        poi.id = id;
+        poi.latitude = latitude;
+        poi.longitude = longitude;
+	    features.push_back(poi);
         wxLogMessage (_T("OSM_PI: sqlite3_step() row: %lli, %f, %f"), id, latitude, longitude);
+        count++;
         ret = sqlite3_step (m_params.select_nodes_stmt);
     }
+
     if (ret == SQLITE_DONE)
-	;
+        wxLogMessage (_T("OSM_PI: select nodes complete"));
     else
     {
         wxLogMessage (_T("OSM_PI: sqlite3_step() error: SELECT osm_nodes"));
@@ -547,9 +572,11 @@ void OsmDb::CreateSqlStatements (struct aux_params *params, int journal_off)
 
     Exec( params->db_handle, _T("BEGIN") );
 
-    sql = _T("SELECT n.node_id, n.timestamp, X(Geometry), Y(Geometry), t.* ")
+    sql = _T("SELECT n.node_id, n.timestamp, X(Geometry), Y(Geometry), t.k, t.v ")
           _T("FROM osm_nodes AS n JOIN osm_node_tags AS t ON (t.node_id = n.node_id) ")
-          _T("WHERE k='seamark:type' AND MBRContains(BuildMBR(?, ?, ?, ?), Geometry)");
+          _T("WHERE k='seamark:type' ") 
+          //_T("AND n.node_id NOT IN (?)");
+          _T("AND MBRContains(BuildMBR(?, ?, ?, ?), Geometry)");
     sqlite3_prepare_v2 (params->db_handle, sql.mb_str(), sql.length(),
 			    &params->select_nodes_stmt, NULL);
     //params->select_nodes_stmt = PrepareStatement(params->db_handle,sql);
@@ -687,7 +714,7 @@ void OsmDb::SpatialiteAutocreate (sqlite3 * db)
       }
 }
 
-void OsmDb::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
+bool OsmDb::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
 {
     wxLogMessage (_T("OSM_PI: OpenDb"));
     // opening the DB
@@ -727,8 +754,10 @@ void OsmDb::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
     {
         wxLogMessage (_T("OSM_PI: cannot open '%s': %s"), path,
             sqlite3_errmsg (db_handle));
-        return;
+        return false;
     }
+      
+    sqlite3_profile(db_handle, &profile, NULL);
       
     // see if we've already created the database
     sql = _T("SELECT value FROM settings WHERE key = 'DBVersion'");
@@ -740,7 +769,7 @@ void OsmDb::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
 	    // get DBVersion
         sqlite3_free_table (results);
         *handle = db_handle;
-        return;
+        return true;
 	}
     sqlite3_free_table (results);
     
@@ -928,12 +957,14 @@ void OsmDb::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
     //db_ver = 1;
 
     *handle = db_handle;
-    return;
+    return true;
 
   unknown:
     wxLogMessage (_T("OSM_PI: DB '%s'"), path);
     wxLogMessage (_T("OSM_PI: doesn't seems to contain valid Spatial Metadata ..."));
     wxLogMessage (_T("OSM_PI: Please, initialize Spatial Metadata"));
-    return;
+    return false;
 }
+
+
 
