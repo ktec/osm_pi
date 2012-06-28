@@ -26,6 +26,27 @@
  ***************************************************************************
  */
 
+    /*
+    //[seamark:type=
+    anchorage|anchor_berth|berth|building|
+    beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|
+    buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|
+    cable_area|cable_submarine|causway|coastguard_station|
+    daymark|fog_signal|
+    gate|harbour|landmark|
+    light|light_major|light_minor|light_float|light_vessel|
+    lock_basin|
+    mooring|navigation_line|notice|
+    pile|
+    pilot_boarding|
+    platform|production_area|
+    radar_reflector|radar_transponder|radar_station|radio_station|
+    recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|
+    separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
+    shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
+    */
+
+
 #include "osm_pi.h"
 
 // the class factories, used to create and destroy instances of the PlugIn
@@ -45,14 +66,6 @@ void appendOSDirSlash(wxString* pString)
     if (pString->Last() != sep)
         pString->Append(sep);
 }
-
-// write downloaded data
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
-    size_t written;
-    written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
- 
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -255,16 +268,6 @@ wxString osm_pi::GetLongDescription()
     database and displays it on the chart.");
 }
 
-wxString osm_pi::GetApiUrl(float lon_min, float lat_min, float lon_max, float lat_max)
-{
-    wxString url;
-    url = _("http://open.mapquestapi.com/xapi/api/0.6/*[seamark:type=*][bbox=%f,%f,%f,%f]");
-    //url = _("http://www.overpass-api.de/api/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
-    //url = _("http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
-
-    return wxString::Format(url, lon_min, lat_min, lon_max, lat_max);
-}
-
 void osm_pi::SetCursorLatLon(double lat, double lon)
 {
     //m_cursor_lon = lon;
@@ -353,28 +356,6 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
         return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
     }
     m_pastVp = vp;
-    m_api_url = GetApiUrl(m_pastVp.lon_min, m_pastVp.lat_min, m_pastVp.lon_max, m_pastVp.lat_max);
-    //wxLogMessage (_T("OSM_PI: SetCurrentViewPort api_url = [%s]"), m_api_url.c_str());
-
-    /*
-    //[seamark:type=
-    anchorage|anchor_berth|berth|building|
-    beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|
-    buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|
-    cable_area|cable_submarine|causway|coastguard_station|
-    daymark|fog_signal|
-    gate|harbour|landmark|
-    light|light_major|light_minor|light_float|light_vessel|
-    lock_basin|
-    mooring|navigation_line|notice|
-    pile|
-    pilot_boarding|
-    platform|production_area|
-    radar_reflector|radar_transponder|radar_station|radio_station|
-    recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|
-    separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
-    shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
-    */
 
 //    select_nodes (&m_params, 
 //        (double) m_pastVp.lat_min, (double) m_pastVp.lon_min, 
@@ -516,48 +497,10 @@ void osm_pi::OnToolbarToolCallback(int id)
     if (success)
     {
         wxLogMessage (_T("OSM_PI: We have a file to play with...."));
+        ReadOsm();
     }
 }
 
-//---------------------------------------------------------------------------------------------------------
-//
-//          Overpass/OSM methods
-//
-//---------------------------------------------------------------------------------------------------------
-
-const char *osm_pi::m_osm_path = "/tmp/features.osm";
-
-void osm_pi::DownloadUrl(wxString url)
-{
-    wxLogMessage (_T("OSM_PI: DownloadUrl [%s]"), url.c_str());
-    CURL *curl;
-    FILE *fp;
-    CURLcode res;
-    
-    curl = curl_easy_init();
-    if (curl) {
-        fp = fopen(m_osm_path,"wb");
-        curl_easy_setopt(curl, CURLOPT_URL, url.mb_str().data() );
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
-        res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        fclose(fp);
-    }
-
-	if(res == CURLE_OK)
-	{
-        wxLogMessage (_T("OSM_PI: File downloaded"));
-	    // Download completed ok
-	    OnDownloadComplete();
-	}
-	else
-	{
-		//wxString m_errorString = wxT(curl_easy_strerror(res));
-		//wxMessageBox(m_errorString);
-		//wxLogMessage (_T("OSM_PI: Dang!! Couldnt download url because %s : [%s]"), m_errorString.c_str(), url.c_str());
-	}
-}
 
 //---------------------------------------------------------------------------------------------------------
 //
@@ -565,19 +508,19 @@ void osm_pi::DownloadUrl(wxString url)
 //
 //---------------------------------------------------------------------------------------------------------
 
-void osm_pi::OnDownloadComplete()
+void osm_pi::ReadOsm()
 {
     wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
     //sqlite3 *handle;
-    //const char *osm_path = NULL;
+    const char *osm_path = OsmDownloader::m_osm_path;
     //struct aux_params params;
     const void *osm_handle;
 
 /* parsing the input OSM-file */
-    if (readosm_open (m_osm_path, &osm_handle) != READOSM_OK)
+    if (readosm_open (osm_path, &osm_handle) != READOSM_OK)
     {
         wxLogMessage (_T("OSM_PI: Cant open file"));
-        fprintf (stderr, "cannot open %s\n", m_osm_path);
+        fprintf (stderr, "cannot open %s\n", osm_path);
         readosm_close (osm_handle);
         //return -1;
     }
@@ -591,7 +534,7 @@ void osm_pi::OnDownloadComplete()
 	    consume_relation) != READOSM_OK)
     {
 //        wxLogMessage (_T("OSM_PI: unrecoverable error while parsing %s"), m_osm_path);
-        fprintf (stderr, "unrecoverable error while parsing %s\n", m_osm_path);
+        fprintf (stderr, "unrecoverable error while parsing %s\n", osm_path);
         commit_sql_transaction (&m_params);
         readosm_close (osm_handle);
         //return -1;

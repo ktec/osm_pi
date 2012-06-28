@@ -28,16 +28,17 @@
 
 #include "osmdownloader.h"
 
+const char *OsmDownloader::m_osm_path = "/tmp/features.osm";
+const char *OsmDownloader::m_api_url = "http://open.mapquestapi.com/xapi/api/0.6/";
+//const char *OsmDownloader::m_api_url = "http://www.overpass-api.de/api/xapi?";
+    //url = _("http://www.overpass-api.de/api/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
+//const char *OsmDownloader::m_api_url = "http://overpass.osm.rambler.ru/cgi/xapi?";
+    //url = _("http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
+
+
 OsmDownloader::OsmDownloader()
 {
-
     // constructor
-    m_osm_path = "/tmp/features.osm";
-    m_api_url = "http://open.mapquestapi.com/xapi/api/0.6/";
-    //const char *OsmDownloader::m_api_url = "http://www.overpass-api.de/api/xapi?";
-        //url = _("http://www.overpass-api.de/api/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
-    //const char *OsmDownloader::m_api_url = "http://overpass.osm.rambler.ru/cgi/xapi?";
-        //url = _("http://overpass.osm.rambler.ru/cgi/xapi?*[bbox=[%f,%f,%f,%f][seamark:type=*]]");
 }
 
 OsmDownloader::~OsmDownloader()
@@ -53,8 +54,8 @@ size_t OsmDownloader::write_data(void *ptr, size_t size, size_t nmemb, FILE *str
 
 bool OsmDownloader::Download(double x1, double y1, double x2, double y2)
 {
-    char *url = NULL;
-    sprintf (url, "%s*[seamark:type=*][bbox=%f,%f,%f,%f]", m_api_url, x1, y1, x2, y2);
+    wxString url = GetApiUrl(x1,y1,x2,y2);
+    wxLogMessage (_T("OSM_PI: Downloading %s"),url.c_str());
 
     CURL *curl;
     FILE *fp;
@@ -63,14 +64,23 @@ bool OsmDownloader::Download(double x1, double y1, double x2, double y2)
     curl = curl_easy_init();
     if (curl) {
         fp = fopen(m_osm_path,"wb");
-        curl_easy_setopt(curl, CURLOPT_URL, url );
+        curl_easy_setopt(curl, CURLOPT_URL, url.mb_str().data() );
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
         res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
         fclose(fp);
     }
-    // curl_easy_strerror(res)
+
+		//wxString m_errorString = wxT(curl_easy_strerror(res));
+		//wxMessageBox(m_errorString);
+		//wxLogMessage (_T("OSM_PI: Dang!! Couldnt download url because %s : [%s]"), m_errorString.c_str(), url.c_str());
+    
 	return (res == CURLE_OK);
+}
+
+wxString OsmDownloader::GetApiUrl(double x1, double y1, double x2, double y2)
+{
+    return wxString::Format(_("%s*[seamark:type=*][bbox=%f,%f,%f,%f]"), wxString::FromUTF8(m_api_url).c_str(), (float)x1, (float)y1, (float)x2, (float)y2);
 }
 

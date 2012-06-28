@@ -62,9 +62,6 @@
 //World Mercator
 #define PROJECTION 3395
 #define DATABASE_NAME "osm.sqlite"
-#define CURL_STATICLIB
-#include <curl/curl.h>
-#include <curl/easy.h>
 
 #include "osmdownloader.h"
 
@@ -76,7 +73,7 @@ class OsmDlg;
 //----------------------------------------------------------------------------------------------------------
 
 #define OSM_TOOL_POSITION    -1          // Request default positioning of toolbar tool
-WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
+//WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
 //WX_DEFINE_ARRAY(double, NodeRefList);
 
 struct aux_params
@@ -119,7 +116,6 @@ public:
     wxString GetCommonName();
     wxString GetShortDescription();
     wxString GetLongDescription();
-    wxString GetApiUrl(float lon_min, float lat_min, float lon_max, float lat_max);
 
     //    The required override PlugIn Methods
     int GetToolbarToolCount(void);
@@ -140,22 +136,15 @@ public:
 
     void SetCursorLatLon(double lat, double lon);
     void OnOsmDialogClose();
-    void OnDownloadComplete();
+    void ReadOsm();
 
 protected:
-    void              DownloadUrl(wxString url);
     void              DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
     wxDC            *m_pdc;
 
 private:
 
     OsmDownloader *m_pDownloader;
-
-    sqlite3 *m_database;
-    sqlite3_stmt *m_stmt;
-    int ret;
-    char *err_msg;
-    bool b_dbUsable;
 
     wxFileConfig *m_pconfig;
     wxWindow *m_parent_window;
@@ -172,21 +161,29 @@ private:
     bool m_bRenderOverlay;
     int m_iOpacity;
     int m_iUnits;
-    wxString m_dbpath;
 
     int m_leftclick_tool_id;
     bool m_bshuttingDown;
     short mPriPosition;
     PlugIn_ViewPort m_pastVp;
     wxString m_api_url;
+
+    // ReadOSM stuff
     
     struct aux_params m_params;
-
-    static const char *m_osm_path;
       
     static int consume_node (const void *user_data, const readosm_node * node);
     static int consume_way (const void *user_data, const readosm_way * way);
     static int consume_relation (const void *user_data, const readosm_relation * relation);
+
+    // Database stuff
+
+    wxString m_dbpath;
+    sqlite3 *m_database;
+    sqlite3_stmt *m_stmt;
+    int ret;
+    char *err_msg;
+    bool b_dbUsable;
 
     static int insert_node (struct aux_params *params, const readosm_node * node);
     static int insert_way (struct aux_params *params, const readosm_way * way);

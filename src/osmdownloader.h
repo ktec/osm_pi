@@ -29,6 +29,10 @@
 #ifndef _OSMDOWNLOADER_H_
 #define _OSMDOWNLOADER_H_
 
+#ifndef  WX_PRECOMP
+  #include "wx/wx.h"
+#endif //precompiled headers
+
 #include <cstddef>
 #define CURL_STATICLIB
 #include <curl/curl.h>
@@ -37,15 +41,18 @@
 class OsmDownloader
 {
     public:
+
         OsmDownloader();
         ~OsmDownloader();
 
         bool Download(double x1, double y1, double x2, double y2);
-
-    private:
         static const char *m_osm_path;
         static const char *m_api_url;
+
+    private:
+
         static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
+        static wxString GetApiUrl(double x1, double y1, double x2, double y2);
 };
 
 #endif
