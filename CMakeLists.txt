@@ -69,6 +69,8 @@ SET(SRC_OSM
     src/osm_pi.cpp
     src/osmdownloader.h
     src/osmdownloader.cpp
+    src/osmdb.h
+    src/osmdb.cpp
     src/icons.h
     src/icons.cpp
     src/osmgui.h

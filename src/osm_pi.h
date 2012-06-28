@@ -36,9 +36,6 @@
   #include <wx/glcanvas.h>
 #endif //precompiled headers
 
-#include <wx/stdpaths.h>
-#include <wx/fileconf.h>
-#include <wx/filename.h>
 #include <wx/hashmap.h>
 #include <wx/event.h>
 #include <map>
@@ -51,20 +48,12 @@
 
 #include "../../../include/ocpn_plugin.h"
 #include "osmgui_impl.h"
-//#include <spatialite/gaiageo.h>
-//#include <spatialite.h>
-//#include <readosm.h>
-#include "libspatialite-amalgamation-3.0.1/headers/spatialite/sqlite3.h"
-#include "libspatialite-amalgamation-3.0.1/headers/spatialite/gaiageo.h"
-#include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
-#include "readosm/readosm.h"
 
 //World Mercator
 #define PROJECTION 3395
-#define DATABASE_NAME "osm.sqlite"
 
 #include "osmdownloader.h"
-
+#include "osmdb.h"
 
 class OsmDlg;
 
@@ -75,29 +64,6 @@ class OsmDlg;
 #define OSM_TOOL_POSITION    -1          // Request default positioning of toolbar tool
 //WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
 //WX_DEFINE_ARRAY(double, NodeRefList);
-
-struct aux_params
-{
-/* an auxiliary struct used for XML parsing */
-    sqlite3 *db_handle;
-    sqlite3_stmt *select_nodes_stmt;
-    sqlite3_stmt *ins_nodes_stmt;
-    sqlite3_stmt *ins_node_tags_stmt;
-    sqlite3_stmt *ins_ways_stmt;
-    sqlite3_stmt *ins_way_tags_stmt;
-    sqlite3_stmt *ins_way_refs_stmt;
-    sqlite3_stmt *ins_relations_stmt;
-    sqlite3_stmt *ins_relation_tags_stmt;
-    sqlite3_stmt *ins_relation_refs_stmt;
-    int wr_nodes;
-    int wr_node_tags;
-    int wr_ways;
-    int wr_way_tags;
-    int wr_way_refs;
-    int wr_relations;
-    int wr_rel_tags;
-    int wr_rel_refs;
-};
 
 class osm_pi : public opencpn_plugin_18
 {
@@ -131,20 +97,27 @@ public:
     //      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
 
     //    Other public methods
-    void SetOsmDialogX    (int x){ m_osm_dialog_x = x;};
-    void SetOsmDialogY    (int x){ m_osm_dialog_y = x;}
+    void SetOsmDialogX (int x){ m_osm_dialog_x = x;};
+    void SetOsmDialogY (int x){ m_osm_dialog_y = x;}
 
     void SetCursorLatLon(double lat, double lon);
     void OnOsmDialogClose();
-    void ReadOsm();
 
 protected:
-    void              DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
-    wxDC            *m_pdc;
+    void DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
+    wxDC *m_pdc;
 
 private:
 
+    OsmDlg *m_pOsmDialog;
+    int m_osm_dialog_x, m_osm_dialog_y;
+    int m_display_width, m_display_height;
+    bool m_bRenderOverlay;
+    int m_iOpacity;
+    int m_iUnits;
+
     OsmDownloader *m_pDownloader;
+    OsmDb *m_pOsmDb;
 
     wxFileConfig *m_pconfig;
     wxWindow *m_parent_window;
@@ -154,51 +127,11 @@ private:
     double m_lat, m_lon;
     wxDateTime m_lastPosReport;
 
-    OsmDlg *m_pOsmDialog;
-
-    int m_osm_dialog_x, m_osm_dialog_y;
-    int m_display_width, m_display_height;
-    bool m_bRenderOverlay;
-    int m_iOpacity;
-    int m_iUnits;
-
     int m_leftclick_tool_id;
     bool m_bshuttingDown;
     short mPriPosition;
     PlugIn_ViewPort m_pastVp;
-    wxString m_api_url;
 
-    // ReadOSM stuff
-    
-    struct aux_params m_params;
-      
-    static int consume_node (const void *user_data, const readosm_node * node);
-    static int consume_way (const void *user_data, const readosm_way * way);
-    static int consume_relation (const void *user_data, const readosm_relation * relation);
-
-    // Database stuff
-
-    wxString m_dbpath;
-    sqlite3 *m_database;
-    sqlite3_stmt *m_stmt;
-    int ret;
-    char *err_msg;
-    bool b_dbUsable;
-
-    static int insert_node (struct aux_params *params, const readosm_node * node);
-    static int insert_way (struct aux_params *params, const readosm_way * way);
-    static int insert_relation (struct aux_params *params, const readosm_relation * relation);
-
-    static int select_nodes (struct aux_params *params, 
-        double lat, double lon, double lat_max, double lon_max);
-
-    static void begin_sql_transaction (struct aux_params *params);
-    static void commit_sql_transaction (struct aux_params *params);
-    static void finalize_sql_stmts (struct aux_params *params);
-    static void create_sql_stmts (struct aux_params *params, int journal_off);
-    static void spatialite_autocreate (sqlite3 * db);
-    static void open_db (const char *path, sqlite3 ** handle, int cache_size);
-      
 };
 
 #endif
