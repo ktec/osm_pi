@@ -71,6 +71,7 @@ class osm_pi : public opencpn_plugin_18
 {
 public:
     osm_pi(void *ppimgr);
+    ~osm_pi(void);
 
     //    The required PlugIn Methods
     int Init(void);

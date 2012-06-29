@@ -81,6 +81,12 @@ osm_pi::osm_pi(void *ppimgr)
     initialize_images();
 }
 
+osm_pi::~osm_pi(void)
+{
+    delete _img_osm_pi;
+    delete _img_osm;
+}
+
 int osm_pi::Init(void)
 {
 
@@ -145,7 +151,9 @@ bool osm_pi::DeInit(void)
     SaveConfig();
     
     delete m_pOsmDb;
+    m_pOsmDb = NULL;
     delete m_pDownloader;
+    m_pDownloader = NULL;
     
     return true;
 }
@@ -283,72 +291,73 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
 
 void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask )
 {
-    wxLogMessage (_T("OSM_PI: DoDrawBitmap %i,%i"),x,y);
 
-      if ( m_pdc ) {
+    if ( m_pdc ) {
+        wxLogMessage (_T("OSM_PI: DoDrawBitmap %i,%i"),x,y);
             m_pdc->DrawBitmap( bitmap, x, y, usemask );
-      } else {
-            // GL doesn't draw anything if x<0 || y<0 so we must crop image first
-            wxBitmap bmp;
-            if ( x < 0 || y < 0 ) {
-                  int dx = (x < 0 ? -x : 0);
-                  int dy = (y < 0 ? -y : 0);
-                  int w = bitmap.GetWidth()-dx;
-                  int h = bitmap.GetHeight()-dy;
-                  /* picture is out of viewport */
-                  if ( w <= 0 || h <= 0 )
-                        return;
-                  wxBitmap newBitmap = bitmap.GetSubBitmap( wxRect( dx, dy, w, h ) );
-                  x += dx;
-                  y += dy;
-                  bmp = newBitmap;
-            } else {
-                  bmp = bitmap;
-            }
-            wxImage image = bmp.ConvertToImage();
-            int w = image.GetWidth(), h = image.GetHeight();
+    } else {
+        wxLogMessage (_T("OSM_PI: DoDrawBitmapGL %i,%i"),x,y);
+        // GL doesn't draw anything if x<0 || y<0 so we must crop image first
+        wxBitmap bmp;
+        if ( x < 0 || y < 0 ) {
+              int dx = (x < 0 ? -x : 0);
+              int dy = (y < 0 ? -y : 0);
+              int w = bitmap.GetWidth()-dx;
+              int h = bitmap.GetHeight()-dy;
+              /* picture is out of viewport */
+              if ( w <= 0 || h <= 0 )
+                    return;
+              wxBitmap newBitmap = bitmap.GetSubBitmap( wxRect( dx, dy, w, h ) );
+              x += dx;
+              y += dy;
+              bmp = newBitmap;
+        } else {
+              bmp = bitmap;
+        }
+        wxImage image = bmp.ConvertToImage();
+        int w = image.GetWidth(), h = image.GetHeight();
 
-            if ( usemask ) {
-                  unsigned char *d = image.GetData();
-                  unsigned char *a = image.GetAlpha();
+        if ( usemask ) {
+              unsigned char *d = image.GetData();
+              unsigned char *a = image.GetAlpha();
 
-                  unsigned char mr, mg, mb;
-                  if( !image.GetOrFindMaskColour( &mr, &mg, &mb ) && !a )
-                        printf("trying to use mask to draw a bitmap without alpha or mask\n");
+              unsigned char mr, mg, mb;
+              if( !image.GetOrFindMaskColour( &mr, &mg, &mb ) && !a )
+                    printf("trying to use mask to draw a bitmap without alpha or mask\n");
 
-                  unsigned char *e = new unsigned char[4*w*h];
-                  //               int w = image.GetWidth(), h = image.GetHeight();
-                  int sb = w*h;
-                  unsigned char r, g, b;
-                  for ( int i=0 ; i<sb ; i++ ) {
-                        r = d[i*3 + 0];
-                        g = d[i*3 + 1];
-                        b = d[i*3 + 2];
+              unsigned char *e = new unsigned char[4*w*h];
+              //               int w = image.GetWidth(), h = image.GetHeight();
+              int sb = w*h;
+              unsigned char r, g, b;
+              for ( int i=0 ; i<sb ; i++ ) {
+                    r = d[i*3 + 0];
+                    g = d[i*3 + 1];
+                    b = d[i*3 + 2];
 
-                        e[i*4 + 0] = r;
-                        e[i*4 + 1] = g;
-                        e[i*4 + 2] = b;
+                    e[i*4 + 0] = r;
+                    e[i*4 + 1] = g;
+                    e[i*4 + 2] = b;
 
-                        e[i*4 + 3] = a ? a[i] :
-                        ((r==mr)&&(g==mg)&&(b==mb) ? 0 : 255);
-                  }
+                    e[i*4 + 3] = a ? a[i] :
+                    ((r==mr)&&(g==mg)&&(b==mb) ? 0 : 255);
+              }
 
-                  glColor4f( 1, 1, 1, 1 );
-                  glEnable( GL_BLEND );
-                  glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-                  glRasterPos2i( x, y );
-                  glPixelZoom( 1, -1 );
-                  glDrawPixels( w, h, GL_RGBA, GL_UNSIGNED_BYTE, e );
-                  glPixelZoom( 1, 1 );
-                  glDisable( GL_BLEND );
-                  free( e );
-            } else {
-                  glRasterPos2i( x, y );
-                  glPixelZoom( 1, -1 ); /* draw data from top to bottom */
-                  glDrawPixels( w, h, GL_RGB, GL_UNSIGNED_BYTE, image.GetData() );
-                  glPixelZoom( 1, 1 );
-            }
-      }
+              glColor4f( 1, 1, 1, 1 );
+              glEnable( GL_BLEND );
+              glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+              glRasterPos2i( x, y );
+              glPixelZoom( 1, -1 );
+              glDrawPixels( w, h, GL_RGBA, GL_UNSIGNED_BYTE, e );
+              glPixelZoom( 1, 1 );
+              glDisable( GL_BLEND );
+              free( e );
+        } else {
+              glRasterPos2i( x, y );
+              glPixelZoom( 1, -1 ); /* draw data from top to bottom */
+              glDrawPixels( w, h, GL_RGB, GL_UNSIGNED_BYTE, image.GetData() );
+              glPixelZoom( 1, 1 );
+        }
+    }
 }
 bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
 {
@@ -369,8 +378,21 @@ bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
         double lat = (*it).latitude;
         double lon = (*it).longitude;
         GetCanvasPixLL(vp, &pl, lat, lon);
-        DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
-        wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
+        //wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
+        //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
+        
+        if(m_pdc && m_pdc->IsOk())
+        {     
+            m_pdc->SetPen(*wxBLACK_PEN);
+            m_pdc->SetBrush(*wxTRANSPARENT_BRUSH);
+        }
+
+        if(m_pdc && m_pdc->IsOk())
+        {
+            m_pdc->DrawCircle(pl.x, pl.y,10);
+            wxLogMessage (_T("OSM_PI: DrawCircle"));
+        }
+        
     }
 
     return true;
