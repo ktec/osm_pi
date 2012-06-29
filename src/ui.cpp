@@ -61,6 +61,11 @@ OsmOverlayUI::OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename 
       wxBoxSizer *itemBoxSizer01 = new wxBoxSizer( wxHORIZONTAL );
       topsizer->Add( itemBoxSizer01, 0, wxALL );
 
+      m_pButtonDownload = new wxBitmapButton( this, wxID_ANY, *_img_download, wxDefaultPosition, wxDefaultSize );
+      itemBoxSizer01->Add( m_pButtonDownload, 0, wxALIGN_CENTER, 2 );
+      m_pButtonDownload->Connect( wxEVT_COMMAND_BUTTON_CLICKED,
+            wxCommandEventHandler( OsmOverlayUI::OnDownload ), NULL, this );
+
       Fit();
       // GetSize() doesn't seems to count aui borders so we add it now.
       wxSize sz = GetSize(); sz.IncBy(10,24);
@@ -68,6 +73,8 @@ OsmOverlayUI::OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename 
 
       UpdateButtonsState();
       m_pFactory = new OsmOverlayFactory();
+      m_pDatabase = new OsmDatabase();
+      m_pDownloader = new OsmDownloader();
 }
 
 OsmOverlayUI::~OsmOverlayUI()
@@ -112,5 +119,12 @@ void OsmOverlayUI::OnCheckToggle( wxCommandEvent& event )
 void OsmOverlayUI::UpdateButtonsState()
 {
 //      m_pButtonDelete->Enable( m_pCheckListBox->GetSelection() != wxNOT_FOUND );
+}
+
+void OsmOverlayUI::OnDownload( wxCommandEvent &event )
+{
+    // start download
+    //m_pDatabase
+    //m_pDownloader
 }
 

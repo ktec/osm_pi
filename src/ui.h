@@ -37,6 +37,8 @@
 
 #include <wx/checklst.h>
 #include "../../../include/ocpn_plugin.h"
+#include "db.h"
+#include "downloader.h"
 #include "factory.h"
 
 class OsmOverlayUI : public wxPanel // must be a wxPanel, not wxWindow so AutoLayout works
@@ -55,11 +57,15 @@ public:
 private:
       void OnListItemSelected( wxCommandEvent& event );
       void OnCheckToggle( wxCommandEvent& event );
+      void OnDownload( wxCommandEvent& event );
       void UpdateButtonsState();
 
       wxCheckListBox       *m_pCheckListBox;
+      wxBitmapButton       *m_pButtonDownload;
 
+      OsmDatabase          *m_pDatabase;
       OsmOverlayFactory    *m_pFactory;
+      OsmDownloader        *m_pDownloader;
 };
 
 #endif

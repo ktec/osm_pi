@@ -26,8 +26,8 @@
  ***************************************************************************
  */
 
-#ifndef _OSMDB_H_
-#define _OSMDB_H_
+#ifndef _OSMDATABASE_H_
+#define _OSMDATABASE_H_
 
 #ifndef  WX_PRECOMP
   #include "wx/wx.h"
@@ -81,46 +81,43 @@ struct Poi
 	double longitude;
 };
 
-class OsmDb
+class OsmDatabase
 {
-    public:
+public:
+    OsmDatabase();
+    ~OsmDatabase();
 
-        OsmDb();
-        ~OsmDb();
+    // ReadOSM stuff
+    struct aux_params m_params;
+    void ConsumeOsm(const char *osm_path);
+    int SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features);
 
-        // ReadOSM stuff
-        struct aux_params m_params;
-        void ConsumeOsm(const char *osm_path);
-        int SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features);
+private:
+    static int ConsumeNode (const void *user_data, const readosm_node * node);
+    static int ConsumeWay (const void *user_data, const readosm_way * way);
+    static int ConsumeRelation (const void *user_data, const readosm_relation * relation);
 
-    private:
+    // Database stuff
+    wxString m_dbpath;
+    sqlite3 *m_database;
+    sqlite3_stmt *m_stmt;
+    int ret;
+    char *err_msg;
+    bool b_dbUsable;
 
-        static int ConsumeNode (const void *user_data, const readosm_node * node);
-        static int ConsumeWay (const void *user_data, const readosm_way * way);
-        static int ConsumeRelation (const void *user_data, const readosm_relation * relation);
+    static bool OpenDb (const char *path, sqlite3 ** handle, int cache_size);
+    static void SpatialiteAutocreate (sqlite3 * db);
 
-        // Database stuff
-        wxString m_dbpath;
-        sqlite3 *m_database;
-        sqlite3_stmt *m_stmt;
-        int ret;
-        char *err_msg;
-        bool b_dbUsable;
-
-        static bool OpenDb (const char *path, sqlite3 ** handle, int cache_size);
-        static void SpatialiteAutocreate (sqlite3 * db);
-
-        static int InsertNode (struct aux_params *params, const readosm_node * node);
-        static int InsertWay (struct aux_params *params, const readosm_way * way);
-        static int InsertRelation (struct aux_params *params, const readosm_relation * relation);
+    static int InsertNode (struct aux_params *params, const readosm_node * node);
+    static int InsertWay (struct aux_params *params, const readosm_way * way);
+    static int InsertRelation (struct aux_params *params, const readosm_relation * relation);
 
 //        static sqlite3_stmt PrepareStatement (sqlite3 * db_handle, wxString sql);
-        static void CreateSqlStatements (struct aux_params *params, int journal_off);
-        static void FinalizeSqlStatements (struct aux_params *params);
-        static void GetTable(struct aux_params *params, wxString sql, 
-            char ***results, int &n_rows, int &n_columns);
-        static void Exec(sqlite3 * db_handle, wxString sql);
-
+    static void CreateSqlStatements (struct aux_params *params, int journal_off);
+    static void FinalizeSqlStatements (struct aux_params *params);
+    static void GetTable(struct aux_params *params, wxString sql, 
+        char ***results, int &n_rows, int &n_columns);
+    static void Exec(sqlite3 * db_handle, wxString sql);
 
 };
 

@@ -40,7 +40,7 @@ void appendOSDirSlash(wxString* pString)
         pString->Append(sep);
 }
 
-OsmDb::OsmDb()
+OsmDatabase::OsmDatabase()
 {
     // constructor
     //      Establish the location of the database file
@@ -112,7 +112,7 @@ OsmDb::OsmDb()
 
 }
 
-OsmDb::~OsmDb()
+OsmDatabase::~OsmDatabase()
 {
     // destructor
 /* finalizing SQL prepared statements */
@@ -124,7 +124,7 @@ OsmDb::~OsmDb()
     spatialite_cleanup();
 }
 
-void OsmDb::ConsumeOsm(const char *osm_path)
+void OsmDatabase::ConsumeOsm(const char *osm_path)
 {
     wxLogMessage (_T("OSM_PI: OnDownloadComplete"));
     //sqlite3 *handle;
@@ -169,7 +169,7 @@ void OsmDb::ConsumeOsm(const char *osm_path)
 }
 
 // OSM Consumers
-int OsmDb::ConsumeNode (const void *user_data, const readosm_node * node)
+int OsmDatabase::ConsumeNode (const void *user_data, const readosm_node * node)
 {
     wxLogMessage (_T("OSM_PI: processing an OSM Node (ReadOSM callback function)"));
     // processing an OSM Node (ReadOSM callback function)
@@ -179,7 +179,7 @@ int OsmDb::ConsumeNode (const void *user_data, const readosm_node * node)
     return READOSM_OK;
 }
 
-int OsmDb::ConsumeWay (const void *user_data, const readosm_way * way)
+int OsmDatabase::ConsumeWay (const void *user_data, const readosm_way * way)
 {
     wxLogMessage (_T("OSM_PI: processing an OSM Way (ReadOSM callback function)"));
     // processing an OSM Way (ReadOSM callback function)
@@ -189,7 +189,7 @@ int OsmDb::ConsumeWay (const void *user_data, const readosm_way * way)
     return READOSM_OK;
 }
 
-int OsmDb::ConsumeRelation (const void *user_data, const readosm_relation * relation)
+int OsmDatabase::ConsumeRelation (const void *user_data, const readosm_relation * relation)
 {
     wxLogMessage (_T("OSM_PI: processing an OSM Relation (ReadOSM callback function)"));
     // processing an OSM Relation (ReadOSM callback function)
@@ -199,7 +199,7 @@ int OsmDb::ConsumeRelation (const void *user_data, const readosm_relation * rela
     return READOSM_OK;
 }
 
-int OsmDb::SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features)
+int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features)
 {
     wxLogMessage (_T("OSM_PI: SelectNodes %f,%f,%f,%f"),(float)lat,(float)lon,(float)lat_max,(float)lon_max);
     if (!b_dbUsable)
@@ -245,7 +245,7 @@ int OsmDb::SelectNodes (double lat, double lon, double lat_max, double lon_max, 
     return 1;
 }
 
-int OsmDb::InsertNode (struct aux_params *params, const readosm_node * node)
+int OsmDatabase::InsertNode (struct aux_params *params, const readosm_node * node)
 {
     wxLogMessage (_T("OSM_PI: InsertNode"));
     int ret;
@@ -333,7 +333,7 @@ int OsmDb::InsertNode (struct aux_params *params, const readosm_node * node)
     return 1;
 }
 
-int OsmDb::InsertWay (struct aux_params *params, const readosm_way * way)
+int OsmDatabase::InsertWay (struct aux_params *params, const readosm_way * way)
 {
     wxLogMessage (_T("OSM_PI: InsertWay"));
     int ret;
@@ -424,7 +424,7 @@ int OsmDb::InsertWay (struct aux_params *params, const readosm_way * way)
     return 1;
 }
 
-int OsmDb::InsertRelation (struct aux_params *params, const readosm_relation * relation)
+int OsmDatabase::InsertRelation (struct aux_params *params, const readosm_relation * relation)
 {
     wxLogMessage (_T("OSM_PI: InsertRelation"));
     int ret;
@@ -535,7 +535,7 @@ int OsmDb::InsertRelation (struct aux_params *params, const readosm_relation * r
     return 1;
 }
 
-void OsmDb::FinalizeSqlStatements (struct aux_params *params)
+void OsmDatabase::FinalizeSqlStatements (struct aux_params *params)
 {
     wxLogMessage (_T("OSM_PI: FinalizeSqlStatements"));
 
@@ -558,7 +558,7 @@ void OsmDb::FinalizeSqlStatements (struct aux_params *params)
 
 }
 
-void OsmDb::CreateSqlStatements (struct aux_params *params, int journal_off)
+void OsmDatabase::CreateSqlStatements (struct aux_params *params, int journal_off)
 {
     wxLogMessage (_T("OSM_PI: CreateSqlStatements"));
     wxString sql;
@@ -634,7 +634,7 @@ void OsmDb::CreateSqlStatements (struct aux_params *params, int journal_off)
 }
 
 /*
-sqlite3_stmt OsmDb::PrepareStatement (sqlite3 * db_handle, wxString sql)
+sqlite3_stmt OsmDatabase::PrepareStatement (sqlite3 * db_handle, wxString sql)
 {
     sqlite3_stmt *stmt = NULL;
     wxLogMessage (_T("OSM_PI: PrepareStatement: %s"), sql.c_str());
@@ -651,7 +651,7 @@ sqlite3_stmt OsmDb::PrepareStatement (sqlite3 * db_handle, wxString sql)
 }
 */
 
-void OsmDb::GetTable(struct aux_params *params, wxString sql, char ***results, int &n_rows, int &n_columns)
+void OsmDatabase::GetTable(struct aux_params *params, wxString sql, char ***results, int &n_rows, int &n_columns)
 {
     int ret = sqlite3_get_table (params->db_handle, sql.mb_str(), results, &n_rows, &n_columns, NULL);
     if (ret != SQLITE_OK)
@@ -662,7 +662,7 @@ void OsmDb::GetTable(struct aux_params *params, wxString sql, char ***results, i
     }
 }
 
-void OsmDb::Exec(sqlite3 * db_handle, wxString sql)
+void OsmDatabase::Exec(sqlite3 * db_handle, wxString sql)
 {
     int ret = sqlite3_exec (db_handle, sql.mb_str(), NULL, NULL, NULL);
     if (ret != SQLITE_OK)
@@ -672,7 +672,7 @@ void OsmDb::Exec(sqlite3 * db_handle, wxString sql)
     }
 }
 
-void OsmDb::SpatialiteAutocreate (sqlite3 * db)
+void OsmDatabase::SpatialiteAutocreate (sqlite3 * db)
 {
     wxLogMessage (_T("OSM_PI: SpatialiteAutocreate"));
     // attempting to perform self-initialization for a newly created DB
@@ -714,7 +714,7 @@ void OsmDb::SpatialiteAutocreate (sqlite3 * db)
       }
 }
 
-bool OsmDb::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
+bool OsmDatabase::OpenDb (const char *path, sqlite3 ** handle, int cache_size)
 {
     wxLogMessage (_T("OSM_PI: OpenDb"));
     // opening the DB
