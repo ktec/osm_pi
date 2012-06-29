@@ -96,9 +96,6 @@ private:
     int              m_toolbar_item_id;
     OsmOverlayUI    *m_puserinput;
 
-    bool m_bshuttingDown;
-    PlugIn_ViewPort m_pastVp;
-
 };
 
 #endif

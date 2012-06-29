@@ -44,28 +44,31 @@
 class OsmOverlayUI : public wxPanel // must be a wxPanel, not wxWindow so AutoLayout works
 {
 public:
-      OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename );
-      ~OsmOverlayUI();
+    OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename );
+    ~OsmOverlayUI();
 
-      void SetColorScheme( PI_ColorScheme cs );
-      bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
-      bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
+    void SetColorScheme( PI_ColorScheme cs );
+    bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
+    bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
+    void SetCurrentViewPort( PlugIn_ViewPort &vp );
 
-      bool GetVisibility( int idx );
-      int GetCount();
+    bool GetVisibility( int idx );
+    int GetCount();
 
 private:
-      void OnListItemSelected( wxCommandEvent& event );
-      void OnCheckToggle( wxCommandEvent& event );
-      void OnDownload( wxCommandEvent& event );
-      void UpdateButtonsState();
+    void OnListItemSelected( wxCommandEvent& event );
+    void OnCheckToggle( wxCommandEvent& event );
+    void OnDownload( wxCommandEvent& event );
+    void UpdateButtonsState();
 
-      wxCheckListBox       *m_pCheckListBox;
-      wxBitmapButton       *m_pButtonDownload;
+    wxCheckListBox       *m_pCheckListBox;
+    wxBitmapButton       *m_pButtonDownload;
 
-      OsmDatabase          *m_pDatabase;
-      OsmOverlayFactory    *m_pFactory;
-      OsmDownloader        *m_pDownloader;
+    OsmDatabase          *m_pDatabase;
+    OsmOverlayFactory    *m_pFactory;
+    OsmDownloader        *m_pDownloader;
+    PlugIn_ViewPort      m_pViewPort;
+    
 };
 
 #endif

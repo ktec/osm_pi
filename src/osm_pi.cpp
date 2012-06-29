@@ -83,8 +83,6 @@ osm_pi::osm_pi(void *ppimgr)
 
 int osm_pi::Init(void)
 {
-    m_bshuttingDown = false;
-
     AddLocaleCatalog( _T("opencpn-osm_pi") );
 
     m_puserinput = NULL;
@@ -117,7 +115,6 @@ int osm_pi::Init(void)
 
 bool osm_pi::DeInit(void)
 {
-    m_bshuttingDown = true;
     SaveConfig();
     if ( m_puserinput )
     {
@@ -236,32 +233,28 @@ void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 
 void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
 {
-    if (m_bshuttingDown)
-        return;
-    if (vp.clat == m_pastVp.clat && vp.clon == m_pastVp.clon && vp.pix_height == m_pastVp.pix_height && vp.pix_width == m_pastVp.pix_width && vp.rotation == m_pastVp.rotation && vp.chart_scale == m_pastVp.chart_scale && 
-        vp.lat_max == m_pastVp.lat_max && vp.lat_min == m_pastVp.lat_min && vp.lon_max == m_pastVp.lon_max && vp.lon_min == m_pastVp.lon_min && vp.view_scale_ppm == m_pastVp.view_scale_ppm)
+    if ( m_puserinput )
     {
-        return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
+        m_puserinput->SetCurrentViewPort( vp );
     }
-    m_pastVp = vp;
 }
 
 bool osm_pi::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
-      if ( m_puserinput )
-      {
-            return m_puserinput->RenderOverlay( dc, vp );
-      }
-      return false;
+    if ( m_puserinput )
+    {
+        return m_puserinput->RenderOverlay( dc, vp );
+    }
+    return false;
 }
 
 bool osm_pi::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
 {
-      if ( m_puserinput )
-      {
-            return m_puserinput->RenderGLOverlay( pcontext, vp );
-      }
-      return false;
+    if ( m_puserinput )
+    {
+        return m_puserinput->RenderGLOverlay( pcontext, vp );
+    }
+    return false;
 }
 
 void osm_pi::OnToolbarToolCallback(int id)

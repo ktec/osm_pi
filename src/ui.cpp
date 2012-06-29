@@ -101,6 +101,22 @@ bool OsmOverlayUI::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
       return m_pFactory->RenderGLOverlay( pcontext, vp );
 }
 
+void OsmOverlayUI::SetCurrentViewPort( PlugIn_ViewPort &vp )
+{
+    if (vp.clat == m_pViewPort.clat && vp.clon == m_pViewPort.clon 
+        && vp.pix_height == m_pViewPort.pix_height && vp.pix_width == m_pViewPort.pix_width 
+        && vp.rotation == m_pViewPort.rotation && vp.chart_scale == m_pViewPort.chart_scale 
+        && vp.lat_max == m_pViewPort.lat_max && vp.lat_min == m_pViewPort.lat_min 
+        && vp.lon_max == m_pViewPort.lon_max && vp.lon_min == m_pViewPort.lon_min 
+        && vp.view_scale_ppm == m_pViewPort.view_scale_ppm)
+    {
+        //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
+        return;
+    }
+    m_pViewPort = vp;
+    m_pFactory->SetCurrentViewPort( vp );
+}
+
 bool OsmOverlayUI::GetVisibility( int idx )
 {
       return m_pFactory->GetVisibility( idx ); // m_pCheckListBox->IsChecked( idx );

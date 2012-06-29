@@ -59,6 +59,11 @@ bool OsmOverlayFactory::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort 
     return true;
 }
 
+void OsmOverlayFactory::SetCurrentViewPort( PlugIn_ViewPort &vp )
+{
+    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::SetCurrentViewPort"));
+}
+
 void OsmOverlayFactory::SetVisibility( int idx, bool visible )
 {
       //m_Objects.Item( idx )->SetVisibility( visible );
