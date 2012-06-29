@@ -80,7 +80,6 @@ public:
 
     //    Optional plugin overrides
     void SetColorScheme( PI_ColorScheme cs );
-    void SetCurrentViewPort( PlugIn_ViewPort &vp );
     void ShowPreferencesDialog( wxWindow* parent );
 
     //    The override PlugIn Methods

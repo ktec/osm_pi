@@ -93,28 +93,14 @@ void OsmOverlayUI::SetColorScheme( PI_ColorScheme cs )
 
 bool OsmOverlayUI::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
-      return m_pFactory->RenderOverlay( dc, vp );
+    m_pViewPort = *vp;
+    return m_pFactory->RenderOverlay( dc, vp );
 }
 
 bool OsmOverlayUI::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
 {
-      return m_pFactory->RenderGLOverlay( pcontext, vp );
-}
-
-void OsmOverlayUI::SetCurrentViewPort( PlugIn_ViewPort &vp )
-{
-    if (vp.clat == m_pViewPort.clat && vp.clon == m_pViewPort.clon 
-        && vp.pix_height == m_pViewPort.pix_height && vp.pix_width == m_pViewPort.pix_width 
-        && vp.rotation == m_pViewPort.rotation && vp.chart_scale == m_pViewPort.chart_scale 
-        && vp.lat_max == m_pViewPort.lat_max && vp.lat_min == m_pViewPort.lat_min 
-        && vp.lon_max == m_pViewPort.lon_max && vp.lon_min == m_pViewPort.lon_min 
-        && vp.view_scale_ppm == m_pViewPort.view_scale_ppm)
-    {
-        //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
-        return;
-    }
-    m_pViewPort = vp;
-    m_pFactory->SetCurrentViewPort( vp );
+    m_pViewPort = *vp;
+    return m_pFactory->RenderGLOverlay( pcontext, vp );
 }
 
 bool OsmOverlayUI::GetVisibility( int idx )
@@ -140,7 +126,16 @@ void OsmOverlayUI::UpdateButtonsState()
 void OsmOverlayUI::OnDownload( wxCommandEvent &event )
 {
     // start download
-    //m_pDatabase
-    //m_pDownloader
+    double x1 = m_pViewPort.lon_min;
+    double y1 = m_pViewPort.lat_min;
+    double x2 = m_pViewPort.lon_max;
+    double y2 = m_pViewPort.lat_max;
+    
+    bool success = m_pDownloader->Download(x1,y1,x2,y2);
+    if (success)
+    {
+        wxLogMessage (_T("OSM_PI: We have a file to play with...."));
+        m_pDatabase->ConsumeOsm(OsmDownloader::m_osm_path);
+    }
 }
 

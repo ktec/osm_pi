@@ -231,14 +231,6 @@ void osm_pi::ShowPreferencesDialog( wxWindow* parent )
     dialog->Destroy();
 }
 
-void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
-{
-    if ( m_puserinput )
-    {
-        m_puserinput->SetCurrentViewPort( vp );
-    }
-}
-
 bool osm_pi::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
     if ( m_puserinput )

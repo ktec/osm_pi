@@ -171,7 +171,6 @@ void OsmDatabase::ConsumeOsm(const char *osm_path)
 // OSM Consumers
 int OsmDatabase::ConsumeNode (const void *user_data, const readosm_node * node)
 {
-    wxLogMessage (_T("OSM_PI: processing an OSM Node (ReadOSM callback function)"));
     // processing an OSM Node (ReadOSM callback function)
     struct aux_params *params = (struct aux_params *) user_data;
     if (!InsertNode (params, node))
@@ -181,7 +180,6 @@ int OsmDatabase::ConsumeNode (const void *user_data, const readosm_node * node)
 
 int OsmDatabase::ConsumeWay (const void *user_data, const readosm_way * way)
 {
-    wxLogMessage (_T("OSM_PI: processing an OSM Way (ReadOSM callback function)"));
     // processing an OSM Way (ReadOSM callback function)
     struct aux_params *params = (struct aux_params *) user_data;
     if (!InsertWay (params, way))
@@ -191,7 +189,6 @@ int OsmDatabase::ConsumeWay (const void *user_data, const readosm_way * way)
 
 int OsmDatabase::ConsumeRelation (const void *user_data, const readosm_relation * relation)
 {
-    wxLogMessage (_T("OSM_PI: processing an OSM Relation (ReadOSM callback function)"));
     // processing an OSM Relation (ReadOSM callback function)
     struct aux_params *params = (struct aux_params *) user_data;
     if (!InsertRelation (params, relation))
@@ -247,7 +244,7 @@ int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon
 
 int OsmDatabase::InsertNode (struct aux_params *params, const readosm_node * node)
 {
-    wxLogMessage (_T("OSM_PI: InsertNode"));
+    //wxLogMessage (_T("OSM_PI: InsertNode"));
     int ret;
     unsigned char *blob;
     int blob_size;
@@ -335,7 +332,7 @@ int OsmDatabase::InsertNode (struct aux_params *params, const readosm_node * nod
 
 int OsmDatabase::InsertWay (struct aux_params *params, const readosm_way * way)
 {
-    wxLogMessage (_T("OSM_PI: InsertWay"));
+    //wxLogMessage (_T("OSM_PI: InsertWay"));
     int ret;
     int i_tag;
     int i_ref;
@@ -426,7 +423,7 @@ int OsmDatabase::InsertWay (struct aux_params *params, const readosm_way * way)
 
 int OsmDatabase::InsertRelation (struct aux_params *params, const readosm_relation * relation)
 {
-    wxLogMessage (_T("OSM_PI: InsertRelation"));
+    //wxLogMessage (_T("OSM_PI: InsertRelation"));
     int ret;
     int i_tag;
     int i_member;
