@@ -115,7 +115,6 @@ int osm_pi::Init(void)
     //    And load the configuration items
     LoadConfig();
 
-
     m_pDownloader = new OsmDownloader();
     m_pOsmDb = new OsmDb();
 
@@ -445,15 +444,17 @@ void osm_pi::OnToolbarToolCallback(int id)
             {
                   m_osm_dialog_x = 20;
                   m_osm_dialog_y = 170;
-                  m_osm_dialog_sx = 300;
-                  m_osm_dialog_sy = 540;
+                  m_osm_dialog_sx = 200;
+                  m_osm_dialog_sy = 200;
             }
 
 
       // show the OSM dialog
       if(NULL == m_pOsmDialog)
       {
-            m_pOsmDialog = new OsmDlg(m_parent_window);
+            m_pOsmDialog = new OsmDlg(m_parent_window, -1, _("OSM Display Control"),
+                               wxPoint( m_osm_dialog_x, m_osm_dialog_y), 
+                               wxSize( m_osm_dialog_sx, m_osm_dialog_sy));
             m_pOsmDialog->plugin = this;
             //m_pOsmDialog->Create ( m_parent_window, this, -1, _("OSM Display Control"), m_grib_dir,
             //                   wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxSize( m_osm_dialog_sx, m_osm_dialog_sy));
