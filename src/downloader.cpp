@@ -26,7 +26,7 @@
  ***************************************************************************
  */
 
-#include "osmdownloader.h"
+#include "downloader.h"
 
 const char *OsmDownloader::m_osm_path = "/tmp/features.osm";
 const char *OsmDownloader::m_api_url = "http://open.mapquestapi.com/xapi/api/0.6/";

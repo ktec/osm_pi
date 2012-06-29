@@ -26,7 +26,7 @@
  ***************************************************************************
  */
 
-#include "osmdb.h"
+#include "db.h"
 
 
 static void profile(void *context, const char *sql, sqlite3_uint64 ns) {

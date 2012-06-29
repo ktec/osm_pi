@@ -1,5 +1,5 @@
 /***************************************************************************
- * $Id: factory.cpp, v0.1 2012-02-08 SethDart Exp $
+ * $Id: prefdlg.cpp, v0.1 2012-01-20 ktec Exp $
  *
  * Project:  OpenCPN
  * Purpose:  OSM overlay plugin
@@ -26,47 +26,45 @@
  ***************************************************************************
  */
 
-
 #include <wx/wxprec.h>
-#include <wx/mstream.h>
 
 #ifndef  WX_PRECOMP
   #include <wx/wx.h>
 #endif //precompiled headers
 
-#include "factory.h"
-#include "icons.h"
+#include "prefdlg.h"
 
-const wxColor OsmOverlayDefaultColor( 144, 144, 144 );
-
-OsmOverlayFactory::OsmOverlayFactory()
+OsmOverlayPreferencesDialog::OsmOverlayPreferencesDialog( wxWindow *parent, wxWindowID id )
+      :wxDialog( parent, id, _("OSM overlay preferences"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE )
 {
+      Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler( OsmOverlayPreferencesDialog::OnCloseDialog ), NULL, this );
+
+      wxBoxSizer* itemBoxSizerMainPanel = new wxBoxSizer(wxVERTICAL);
+      SetSizer(itemBoxSizerMainPanel);
+
+      wxStaticBox* itemStaticBox01 = new wxStaticBox( this, wxID_ANY, _("Preferences") );
+      wxStaticBoxSizer* itemStaticBoxSizer01 = new wxStaticBoxSizer( itemStaticBox01, wxHORIZONTAL );
+      itemBoxSizerMainPanel->Add( itemStaticBoxSizer01, 0, wxEXPAND|wxALL, 2 );
+
+      wxFlexGridSizer *itemFlexGridSizer01 = new wxFlexGridSizer(2);
+      itemFlexGridSizer01->AddGrowableCol(1);
+      itemStaticBoxSizer01->Add( itemFlexGridSizer01, 0, wxGROW|wxALL, 2 );
+
+      wxStdDialogButtonSizer* DialogButtonSizer = CreateStdDialogButtonSizer(wxOK|wxCANCEL);
+      itemBoxSizerMainPanel->Add(DialogButtonSizer, 0, wxALIGN_RIGHT|wxALL, 5);
+
+      //SetMinSize(wxSize(454, -1));
+      Fit();
 }
 
-OsmOverlayFactory::~OsmOverlayFactory()
+void OsmOverlayPreferencesDialog::OnCloseDialog(wxCloseEvent& event)
 {
+      SavePreferences();
+      event.Skip();
 }
 
-bool OsmOverlayFactory::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
+void OsmOverlayPreferencesDialog::SavePreferences()
 {
-    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::RenderOverlay"));
-    return true;
-}
-
-bool OsmOverlayFactory::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
-{
-    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::RenderGLOverlay"));
-    return true;
-}
-
-void OsmOverlayFactory::SetVisibility( int idx, bool visible )
-{
-      //m_Objects.Item( idx )->SetVisibility( visible );
-      RequestRefresh( GetOCPNCanvasWindow() );
-}
-
-bool OsmOverlayFactory::GetVisibility( int idx )
-{
-      return true;//m_Objects.Item( idx )->GetVisibility();
+    // save settings
 }
 

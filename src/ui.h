@@ -1,13 +1,13 @@
-/******************************************************************************
- * $Id: osmgui_impl.cpp,v 1.0 2011/02/26 01:54:37 ktec Exp $
+/***************************************************************************
+ * $Id: ui.h, v0.1 2012-01-20 ktec Exp $
  *
  * Project:  OpenCPN
- * Purpose:  OSM Plugin
+ * Purpose:  OSM overlay plugin
  * Author:   Keith Salisbury
  *
  ***************************************************************************
- *   Copyright (C) 2012 by Keith Salisbury   *
- *   $EMAIL$   *
+ *   Copyright (C) 2012 by Keith Salisbury                                 *
+ *   keithsalisbury@gmail.com                                              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,26 +22,44 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program; if not, write to the                         *
  *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.             *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************
  */
 
-#include "osmgui_impl.h"
+#ifndef _OsmOverlayUI_H_
+#define _OsmOverlayUI_H_
 
-OsmCfgDlg::OsmCfgDlg( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : OsmCfgDlgDef( parent, id, title, pos, size, style )
+#include <wx/wxprec.h>
+
+#ifndef  WX_PRECOMP
+  #include <wx/wx.h>
+#endif //precompiled headers
+
+#include <wx/checklst.h>
+#include "../../../include/ocpn_plugin.h"
+#include "factory.h"
+
+class OsmOverlayUI : public wxPanel // must be a wxPanel, not wxWindow so AutoLayout works
 {
-}
+public:
+      OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename );
+      ~OsmOverlayUI();
 
-OsmDlg::OsmDlg( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : OsmDlgDef( parent, id, title, pos, size, style )
-{
-}
+      void SetColorScheme( PI_ColorScheme cs );
+      bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
+      bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
 
-void OsmDlg::OnOsmProperties( wxCommandEvent& event )
-{
-      wxMessageBox(_("Sorry, this function is not yet implemented..."));
-      event.Skip(); 
-}
+      bool GetVisibility( int idx );
+      int GetCount();
 
-void OsmDlg::OnOsmCancelClick( wxCommandEvent& event ) { event.Skip(); }
+private:
+      void OnListItemSelected( wxCommandEvent& event );
+      void OnCheckToggle( wxCommandEvent& event );
+      void UpdateButtonsState();
 
-void OsmDlg::OnOsmOkClick( wxCommandEvent& event ) { event.Skip(); }
+      wxCheckListBox       *m_pCheckListBox;
+
+      OsmOverlayFactory    *m_pFactory;
+};
+
+#endif

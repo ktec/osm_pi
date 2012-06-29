@@ -33,14 +33,7 @@
 
 #ifndef  WX_PRECOMP
   #include "wx/wx.h"
-  #include <wx/glcanvas.h>
 #endif //precompiled headers
-
-#include <wx/hashmap.h>
-#include <wx/event.h>
-
-#include <vector>
-#include <map>
 
 #define     PLUGIN_VERSION_MAJOR    0
 #define     PLUGIN_VERSION_MINOR    2
@@ -48,34 +41,29 @@
 #define     MY_API_VERSION_MAJOR    1
 #define     MY_API_VERSION_MINOR    8
 
+#include <wx/aui/aui.h>
+#include <wx/fileconf.h>
 #include "../../../include/ocpn_plugin.h"
-#include "osmgui_impl.h"
+#include "ui.h"
 
 //World Mercator
 #define PROJECTION 3395
-
-#include "osmdownloader.h"
-#include "osmdb.h"
-
-class OsmDlg;
+#define OSM_TOOL_POSITION -1  // Request default positioning of toolbar tool
+//WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
+//WX_DEFINE_ARRAY(double, NodeRefList);
 
 //----------------------------------------------------------------------------------------------------------
 //    The PlugIn Class Definition
 //----------------------------------------------------------------------------------------------------------
 
-#define OSM_TOOL_POSITION    -1          // Request default positioning of toolbar tool
-//WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
-//WX_DEFINE_ARRAY(double, NodeRefList);
-
 class osm_pi : public opencpn_plugin_18
 {
 public:
-    osm_pi(void *ppimgr);
-    ~osm_pi(void);
+    osm_pi( void *ppimgr );
 
     //    The required PlugIn Methods
-    int Init(void);
-    bool DeInit(void);
+    int Init( void );
+    bool DeInit( void );
 
     int GetAPIVersionMajor();
     int GetAPIVersionMinor();
@@ -87,57 +75,28 @@ public:
     wxString GetLongDescription();
 
     //    The required override PlugIn Methods
-    int GetToolbarToolCount(void);
-    void OnToolbarToolCallback(int id);
+    int GetToolbarToolCount( void );
+    void OnToolbarToolCallback( int id );
 
     //    Optional plugin overrides
-    void SetColorScheme(PI_ColorScheme cs);
-    void SetCurrentViewPort(PlugIn_ViewPort &vp);
+    void SetColorScheme( PI_ColorScheme cs );
+    void SetCurrentViewPort( PlugIn_ViewPort &vp );
     void ShowPreferencesDialog( wxWindow* parent );
 
     //    The override PlugIn Methods
-    bool RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp);
-    //      bool RenderGLOverlay(wxGLContext *pcontext, PlugIn_ViewPort *vp);
-
-    //    Other public methods
-    void SetOsmDialogX (int x){ m_osm_dialog_x = x;};
-    void SetOsmDialogY (int x){ m_osm_dialog_y = x;}
-
-    void SetCursorLatLon(double lat, double lon);
-    void OnOsmDialogClose();
-
-protected:
-    void DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
-    wxDC *m_pdc;
+    bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
+    bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
 
 private:
+    bool LoadConfig( void );
+    bool SaveConfig( void );
 
-    OsmDlg *m_pOsmDialog;
-    bool m_bShowOsm;
+    wxFileConfig    *m_pconfig;
+    wxAuiManager    *m_pauimgr;
+    int              m_toolbar_item_id;
+    OsmOverlayUI    *m_puserinput;
 
-    int m_osm_dialog_x, m_osm_dialog_y;
-    int m_osm_dialog_sx, m_osm_dialog_sy;
-
-    int m_display_width, m_display_height;
-
-    bool m_bRenderOverlay;
-    int m_iOpacity;
-    int m_iUnits;
-
-    OsmDownloader *m_pDownloader;
-    OsmDb *m_pOsmDb;
-
-    wxFileConfig *m_pconfig;
-    wxWindow *m_parent_window;
-    bool LoadConfig(void);
-    bool SaveConfig(void);
-
-    double m_lat, m_lon;
-    wxDateTime m_lastPosReport;
-
-    int m_leftclick_tool_id;
     bool m_bshuttingDown;
-    short mPriPosition;
     PlugIn_ViewPort m_pastVp;
 
 };

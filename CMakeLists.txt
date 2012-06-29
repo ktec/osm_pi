@@ -67,16 +67,18 @@ FIND_PACKAGE(Gettext REQUIRED)
 SET(SRC_OSM
     src/osm_pi.h
     src/osm_pi.cpp
-    src/osmdownloader.h
-    src/osmdownloader.cpp
-    src/osmdb.h
-    src/osmdb.cpp
+    src/prefdlg.h
+    src/prefdlg.cpp
+    src/downloader.h
+    src/downloader.cpp
+    src/db.h
+    src/db.cpp
+    src/factory.h
+    src/factory.cpp
     src/icons.h
     src/icons.cpp
-    src/osmgui.h
-    src/osmgui.cpp
-    src/osmgui_impl.cpp
-    src/osmgui_impl.h
+    src/ui.h
+    src/ui.cpp
     src/libspatialite-amalgamation-3.0.1/spatialite.c
     src/libspatialite-amalgamation-3.0.1/sqlite3.c
     src/readosm/readosm.c

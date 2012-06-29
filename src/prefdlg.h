@@ -1,13 +1,13 @@
-/******************************************************************************
- * $Id: osmgui_impl.h,v 1.0 2011/02/26 01:54:37 ktec Exp $
+/***************************************************************************
+ * $Id: prefdlg.h, v0.1 2012-01-20 ktec Exp $
  *
  * Project:  OpenCPN
- * Purpose:  OSM Plugin
+ * Purpose:  OSM overlay plugin
  * Author:   Keith Salisbury
  *
  ***************************************************************************
  *   Copyright (C) 2012 by Keith Salisbury                                 *
- *   $EMAIL$                                                               *
+ *   keithsalisbury@gmail.com                                              *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,34 +22,29 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program; if not, write to the                         *
  *   Free Software Foundation, Inc.,                                       *
- *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA.         *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************
  */
 
-#ifndef _OSMGUI_IMPL_H_
-#define _OSMGUI_IMPL_H_
+#ifndef _OSMOVERLAYPREFDLG_H_
+#define _OSMOVERLAYPREFDLG_H_
 
-#include "osmgui.h"
-#include "osm_pi.h"
+#include <wx/wxprec.h>
 
-#include <wx/filedlg.h>
+#ifndef  WX_PRECOMP
+  #include <wx/wx.h>
+#endif //precompiled headers
 
-class osm_pi;
-
-class OsmCfgDlg : public OsmCfgDlgDef
+class OsmOverlayPreferencesDialog : public wxDialog
 {
 public:
-      OsmCfgDlg( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("OSM preferences"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 496,587 ), long style = wxDEFAULT_DIALOG_STYLE );
-};
+    OsmOverlayPreferencesDialog( wxWindow *pparent, wxWindowID id );
+    ~OsmOverlayPreferencesDialog() {}
 
-class OsmDlg : public OsmDlgDef
-{
-public:
-	OsmDlg( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("OSM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 700,550 ), long style = wxDEFAULT_DIALOG_STYLE );
-	void OnOsmProperties( wxCommandEvent& event );
-	void OnOsmCancelClick( wxCommandEvent& event );
-	void OnOsmOkClick( wxCommandEvent& event );
-	osm_pi *plugin;
+    void OnCloseDialog(wxCloseEvent& event);
+    void SavePreferences();
+
+private:
 };
 
 #endif

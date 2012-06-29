@@ -48,6 +48,8 @@
 
 
 #include "osm_pi.h"
+#include "icons.h"
+#include "prefdlg.h"
 
 // the class factories, used to create and destroy instances of the PlugIn
 extern "C" DECL_EXP opencpn_plugin* create_pi(void *ppimgr)
@@ -66,14 +68,6 @@ extern "C" DECL_EXP void destroy_pi(opencpn_plugin* p)
 //
 //---------------------------------------------------------------------------------------------------------
 
-#include "icons.h"
-
-//---------------------------------------------------------------------------------------------------------
-//
-//          PlugIn initialization and de-init
-//
-//---------------------------------------------------------------------------------------------------------
-
 osm_pi::osm_pi(void *ppimgr)
       :opencpn_plugin_18(ppimgr)
 {
@@ -81,51 +75,37 @@ osm_pi::osm_pi(void *ppimgr)
     initialize_images();
 }
 
-osm_pi::~osm_pi(void)
-{
-    delete _img_osm_pi;
-    delete _img_osm;
-}
+//---------------------------------------------------------------------------------------------------------
+//
+//          PlugIn initialization and de-init
+//
+//---------------------------------------------------------------------------------------------------------
 
 int osm_pi::Init(void)
 {
-
     m_bshuttingDown = false;
-    m_lat = 999.0;
-    m_lon = 999.0;
 
     AddLocaleCatalog( _T("opencpn-osm_pi") );
 
-    // Set some default private member parameters
-    m_osm_dialog_x = 0;
-    m_osm_dialog_y = 0;
-    m_osm_dialog_sx = 200;
-    m_osm_dialog_sy = 200;
-    m_pOsmDialog = NULL;
-    m_bShowOsm = false;
+    m_puserinput = NULL;
+    //    This PlugIn needs a toolbar icon, so request its insertion
+    m_toolbar_item_id  = InsertPlugInTool( _T(""), _img_osm, _img_osm, wxITEM_NORMAL,
+        _("OpenSeaMap overlay"), _T(""), NULL, OSM_TOOL_POSITION, 0, this );
 
-    ::wxDisplaySize(&m_display_width, &m_display_height);
+    m_pauimgr = GetFrameAuiManager();
 
-    //    Get a pointer to the opencpn display canvas, to use as a parent for the POI Manager dialog
-    m_parent_window = GetOCPNCanvasWindow();
-
+    m_puserinput = new OsmOverlayUI( GetOCPNCanvasWindow(), wxID_ANY, _T("") );
+    wxAuiPaneInfo pane = wxAuiPaneInfo().Name(_T("OsmOverlay")).Caption(_("OSM overlay")).CaptionVisible(true).Float().FloatingPosition(50,150).Dockable(false).Resizable().CloseButton(true).Show(false);
+    m_pauimgr->AddPane( m_puserinput, pane );
+    m_pauimgr->Update();
+        
     //    Get a pointer to the opencpn configuration object
     m_pconfig = GetOCPNConfigObject();
-
     //    And load the configuration items
     LoadConfig();
 
-    m_pDownloader = new OsmDownloader();
-    m_pOsmDb = new OsmDb();
-
-      //    This PlugIn needs a toolbar icon, so request its insertion
-    m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, 
-        wxITEM_NORMAL,_("OpenSeaMap"), _T(""), NULL,
-        OSM_TOOL_POSITION, 0, this);
-
     return (WANTS_TOOLBAR_CALLBACK    |
           INSTALLS_TOOLBAR_TOOL     |
-          WANTS_CURSOR_LATLON       |
           WANTS_PREFERENCES         |
           WANTS_OVERLAY_CALLBACK    |
           WANTS_ONPAINT_VIEWPORT    |
@@ -138,26 +118,23 @@ int osm_pi::Init(void)
 bool osm_pi::DeInit(void)
 {
     m_bshuttingDown = true;
-    //    Record the dialog position
-    if (NULL != m_pOsmDialog)
-    {
-        wxPoint p = m_pOsmDialog->GetPosition();
-        SetOsmDialogX(p.x);
-        SetOsmDialogY(p.y);
-
-        m_pOsmDialog->Close();
-        delete m_pOsmDialog;
-        m_pOsmDialog = NULL;
-    }
     SaveConfig();
-    
-    delete m_pOsmDb;
-    m_pOsmDb = NULL;
-    delete m_pDownloader;
-    m_pDownloader = NULL;
+    if ( m_puserinput )
+    {
+        m_pauimgr->DetachPane( m_puserinput );
+        m_puserinput->Close();
+        m_puserinput->Destroy();
+        m_puserinput = NULL;
+    }
     
     return true;
 }
+
+//---------------------------------------------------------------------------------------------------------
+//
+//          PlugIn initialization and de-init
+//
+//---------------------------------------------------------------------------------------------------------
 
 int osm_pi::GetAPIVersionMajor()
 {
@@ -200,13 +177,6 @@ wxString osm_pi::GetLongDescription()
     database and displays it on the chart.");
 }
 
-void osm_pi::SetCursorLatLon(double lat, double lon)
-{
-    //m_cursor_lon = lon;
-    //m_cursor_lat = lat;
-    //wxLogMessage (_T("OSM_PI: OnToolbarToolCallback %d,%d\n"), lat,lon);
-}
-
 int osm_pi::GetToolbarToolCount(void)
 {
     return 1;
@@ -214,10 +184,10 @@ int osm_pi::GetToolbarToolCount(void)
 
 void osm_pi::SetColorScheme(PI_ColorScheme cs)
 {
-    if (NULL == m_pOsmDialog)
-        return;
-
-    DimeWindow(m_pOsmDialog);
+    if ( m_puserinput )
+    {
+        m_puserinput->SetColorScheme( cs );
+    }
 }
 
 bool osm_pi::LoadConfig(void)
@@ -228,14 +198,6 @@ bool osm_pi::LoadConfig(void)
     {
         pConf->SetPath ( _T( "/Settings/Osm" ) );
         //pConf->Read ( _T ( "Api Url" ),  &m_sApi_url, API_URL );
-
-        m_osm_dialog_x =  pConf->Read ( _T ( "DialogPosX" ), 20L );
-        m_osm_dialog_y =  pConf->Read ( _T ( "DialogPosY" ), 20L );
-
-        if((m_osm_dialog_x < 0) || (m_osm_dialog_x > m_display_width))
-              m_osm_dialog_x = 5;
-        if((m_osm_dialog_y < 0) || (m_osm_dialog_y > m_display_height))
-              m_osm_dialog_y = 5;
         return true;
     }
     else
@@ -249,10 +211,7 @@ bool osm_pi::SaveConfig(void)
     if(pConf)
     {
         pConf->SetPath ( _T ( "/Settings/Osm" ) );
-    //            pConf->Write ( _T ( "Api Url" ), m_sApi_url );
-
-        pConf->Write ( _T ( "DialogPosX" ),   m_osm_dialog_x );
-        pConf->Write ( _T ( "DialogPosY" ),   m_osm_dialog_y );
+        //pConf->Write ( _T ( "Api Url" ), m_sApi_url );
 
         return true;
     }
@@ -262,20 +221,17 @@ bool osm_pi::SaveConfig(void)
 
 void osm_pi::ShowPreferencesDialog( wxWindow* parent )
 {
-    OsmCfgDlg *dialog = new OsmCfgDlg( parent, wxID_ANY, _("OSM Preferences"), 
-        wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxDefaultSize, wxDEFAULT_DIALOG_STYLE );
-    dialog->Fit();
-    wxColour cl;
-    DimeWindow(dialog);
-    //      dialog->m_tApi_url->SetValue(wxString::Format(wxT("%s"), m_sApi_url));
+    OsmOverlayPreferencesDialog *dialog = new OsmOverlayPreferencesDialog( parent, wxID_ANY );
 
-    if(dialog->ShowModal() == wxID_OK)
+    if ( dialog->ShowModal() == wxID_OK )
     {
-    //            m_sApi_url = dialog->m_cpApi_url->GetUrl().GetAsString();
+        // OnClose should handle that for us normally but it doesn't seems to do so
+        // We must save changes first
+        dialog->SavePreferences();
+
         SaveConfig();
     }
-
-    delete dialog;
+    dialog->Destroy();
 }
 
 void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
@@ -290,215 +246,34 @@ void osm_pi::SetCurrentViewPort(PlugIn_ViewPort &vp)
     m_pastVp = vp;
 }
 
-void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask )
+bool osm_pi::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
-
-    if ( m_pdc ) {
-        wxLogMessage (_T("OSM_PI: DoDrawBitmap %i,%i"),x,y);
-            m_pdc->DrawBitmap( bitmap, x, y, usemask );
-    } else {
-        wxLogMessage (_T("OSM_PI: DoDrawBitmapGL %i,%i"),x,y);
-        // GL doesn't draw anything if x<0 || y<0 so we must crop image first
-        wxBitmap bmp;
-        if ( x < 0 || y < 0 ) {
-              int dx = (x < 0 ? -x : 0);
-              int dy = (y < 0 ? -y : 0);
-              int w = bitmap.GetWidth()-dx;
-              int h = bitmap.GetHeight()-dy;
-              /* picture is out of viewport */
-              if ( w <= 0 || h <= 0 )
-                    return;
-              wxBitmap newBitmap = bitmap.GetSubBitmap( wxRect( dx, dy, w, h ) );
-              x += dx;
-              y += dy;
-              bmp = newBitmap;
-        } else {
-              bmp = bitmap;
-        }
-        wxImage image = bmp.ConvertToImage();
-        int w = image.GetWidth(), h = image.GetHeight();
-
-        if ( usemask ) {
-              unsigned char *d = image.GetData();
-              unsigned char *a = image.GetAlpha();
-
-              unsigned char mr, mg, mb;
-              if( !image.GetOrFindMaskColour( &mr, &mg, &mb ) && !a )
-                    printf("trying to use mask to draw a bitmap without alpha or mask\n");
-
-              unsigned char *e = new unsigned char[4*w*h];
-              //               int w = image.GetWidth(), h = image.GetHeight();
-              int sb = w*h;
-              unsigned char r, g, b;
-              for ( int i=0 ; i<sb ; i++ ) {
-                    r = d[i*3 + 0];
-                    g = d[i*3 + 1];
-                    b = d[i*3 + 2];
-
-                    e[i*4 + 0] = r;
-                    e[i*4 + 1] = g;
-                    e[i*4 + 2] = b;
-
-                    e[i*4 + 3] = a ? a[i] :
-                    ((r==mr)&&(g==mg)&&(b==mb) ? 0 : 255);
-              }
-
-              glColor4f( 1, 1, 1, 1 );
-              glEnable( GL_BLEND );
-              glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-              glRasterPos2i( x, y );
-              glPixelZoom( 1, -1 );
-              glDrawPixels( w, h, GL_RGBA, GL_UNSIGNED_BYTE, e );
-              glPixelZoom( 1, 1 );
-              glDisable( GL_BLEND );
-              free( e );
-        } else {
-              glRasterPos2i( x, y );
-              glPixelZoom( 1, -1 ); /* draw data from top to bottom */
-              glDrawPixels( w, h, GL_RGB, GL_UNSIGNED_BYTE, image.GetData() );
-              glPixelZoom( 1, 1 );
-        }
-    }
+      if ( m_puserinput )
+      {
+            return m_puserinput->RenderOverlay( dc, vp );
+      }
+      return false;
 }
 
-bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
+bool osm_pi::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
 {
-    m_pdc = &dc;
-    if(m_bShowOsm)
-    {
-        double x1 = m_pastVp.lon_min;
-        double y1 = m_pastVp.lat_min;
-        double x2 = m_pastVp.lon_max;
-        double y2 = m_pastVp.lat_max;
-        // TODO: Query local database for seamarks
-        std::vector<Poi> seamarks;
-        m_pOsmDb->SelectNodes(x1,y1,x2,y2,seamarks);
-
-        for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
-            wxPoint pl;
-            double lat = (*it).latitude;
-            double lon = (*it).longitude;
-            GetCanvasPixLL(vp, &pl, lat, lon);
-            //wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
-            //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
-            
-            if(m_pdc && m_pdc->IsOk())
-            {     
-                m_pdc->SetPen(*wxBLACK_PEN);
-                m_pdc->SetBrush(*wxTRANSPARENT_BRUSH);
-            }
-
-            if(m_pdc && m_pdc->IsOk())
-            {
-                m_pdc->DrawCircle(pl.x, pl.y,10);
-                wxLogMessage (_T("OSM_PI: DrawCircle"));
-            }
-        }
-        return true;
-    }
-    else
-        return false;
-    
-//    if (!b_dbUsable || !m_bRenderOverlay)
-//       return false;
-
+      if ( m_puserinput )
+      {
+            return m_puserinput->RenderGLOverlay( pcontext, vp );
+      }
+      return false;
 }
 
 void osm_pi::OnToolbarToolCallback(int id)
 {
-    wxLogMessage (_T("OSM_PI: OnToolbarToolCallback\n"));
-    
-      // Qualify the GRIB dialog position
-            bool b_reset_pos = false;
-
-
-#ifdef __WXMSW__
-        //  Support MultiMonitor setups which an allow negative window positions.
-        //  If the requested window does not intersect any installed monitor,
-        //  then default to simple primary monitor positioning.
-            RECT frame_title_rect;
-            frame_title_rect.left =   m_osm_dialog_x;
-            frame_title_rect.top =    m_osm_dialog_y;
-            frame_title_rect.right =  m_osm_dialog_x + m_osm_dialog_sx;
-            frame_title_rect.bottom = m_osm_dialog_y + 30;
-
-
-            if(NULL == MonitorFromRect(&frame_title_rect, MONITOR_DEFAULTTONULL))
-                  b_reset_pos = true;
-#else
-       //    Make sure drag bar (title bar) of window on Client Area of screen, with a little slop...
-            wxRect window_title_rect;                    // conservative estimate
-            window_title_rect.x = m_osm_dialog_x;
-            window_title_rect.y = m_osm_dialog_y;
-            window_title_rect.width = m_osm_dialog_sx;
-            window_title_rect.height = 30;
-
-            wxRect ClientRect = wxGetClientDisplayRect();
-            ClientRect.Deflate(60, 60);      // Prevent the new window from being too close to the edge
-            if(!ClientRect.Intersects(window_title_rect))
-                  b_reset_pos = true;
-
-#endif
-
-            if(b_reset_pos)
-            {
-                  m_osm_dialog_x = 20;
-                  m_osm_dialog_y = 170;
-                  m_osm_dialog_sx = 200;
-                  m_osm_dialog_sy = 200;
-            }
-
-
-      // show the OSM dialog
-      if(NULL == m_pOsmDialog)
-      {
-            m_pOsmDialog = new OsmDlg(m_parent_window, -1, _("OSM Display Control"),
-                               wxPoint( m_osm_dialog_x, m_osm_dialog_y), 
-                               wxSize( m_osm_dialog_sx, m_osm_dialog_sy));
-            m_pOsmDialog->plugin = this;
-            //m_pOsmDialog->Create ( m_parent_window, this, -1, _("OSM Display Control"), m_grib_dir,
-            //                   wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxSize( m_osm_dialog_sx, m_osm_dialog_sy));
-      }
-
-      //Toggle OSM overlay display
-      m_bShowOsm = !m_bShowOsm;
-
-      //    Toggle dialog?
-      m_pOsmDialog->Show(m_bShowOsm);
-
-      // Toggle is handled by the toolbar but we must keep plugin manager b_toggle updated
-      // to actual status to ensure correct status upon toolbar rebuild
-      SetToolbarItemState( m_leftclick_tool_id, m_bShowOsm );
-
-    
-    
-    
-/* OLD CODE    
-    // OSM Dialog (here we can select what types of objects to show)
-    if(NULL == m_pOsmDialog)
+    if ( m_puserinput )
     {
-        m_pOsmDialog = new OsmDlg(m_parent_window);
-        m_pOsmDialog->plugin = this;
-        m_pOsmDialog->Move(wxPoint(m_osm_dialog_x, m_osm_dialog_y));
+        wxAuiPaneInfo &pane = m_pauimgr->GetPane( m_puserinput );
+        if ( pane.IsOk() && !pane.IsShown() )
+        {
+            pane.Show();
+            m_pauimgr->Update();
+        }
     }
-    m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
-*/
-    //
-    // TODO: this needs to show a dialog which allow the user
-    // to update their local database by pressing a button? Maybe?
-    //DownloadUrl(m_api_url);
-/*
-    double x1 = m_pastVp.lon_min;
-    double y1 = m_pastVp.lat_min;
-    double x2 = m_pastVp.lon_max;
-    double y2 = m_pastVp.lat_max;
-    
-    bool success = m_pDownloader->Download(x1,y1,x2,y2);
-    if (success)
-    {
-        wxLogMessage (_T("OSM_PI: We have a file to play with...."));
-        m_pOsmDb->ConsumeOsm(OsmDownloader::m_osm_path);
-    }
-*/
 }
 
