@@ -378,10 +378,10 @@ bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
             wxPoint pl;
             double lat = (*it).latitude;
             double lon = (*it).longitude;
-            GetCanvasPixLL(vp, &pl, lat, lon);
+            GetCanvasPixLL(vp, &pl, lon, lat);
             //wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
-            //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
-            
+            DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
+            /*
             if(m_pdc && m_pdc->IsOk())
             {     
                 m_pdc->SetPen(*wxBLACK_PEN);
@@ -392,7 +392,7 @@ bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
             {
                 m_pdc->DrawCircle(pl.x, pl.y,10);
                 wxLogMessage (_T("OSM_PI: DrawCircle"));
-            }
+            }*/
         }
         return true;
     }
