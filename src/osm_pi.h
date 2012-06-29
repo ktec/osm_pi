@@ -113,8 +113,13 @@ protected:
 private:
 
     OsmDlg *m_pOsmDialog;
+    bool m_bShowOsm;
+
     int m_osm_dialog_x, m_osm_dialog_y;
+    int m_osm_dialog_sx, m_osm_dialog_sy;
+
     int m_display_width, m_display_height;
+
     bool m_bRenderOverlay;
     int m_iOpacity;
     int m_iUnits;

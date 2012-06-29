@@ -99,6 +99,10 @@ int osm_pi::Init(void)
     // Set some default private member parameters
     m_osm_dialog_x = 0;
     m_osm_dialog_y = 0;
+    m_osm_dialog_sx = 200;
+    m_osm_dialog_sy = 200;
+    m_pOsmDialog = NULL;
+    m_bShowOsm = false;
 
     ::wxDisplaySize(&m_display_width, &m_display_height);
 
@@ -119,8 +123,6 @@ int osm_pi::Init(void)
     m_leftclick_tool_id  = InsertPlugInTool(_T(""), _img_osm, _img_osm, 
         wxITEM_NORMAL,_("OpenSeaMap"), _T(""), NULL,
         OSM_TOOL_POSITION, 0, this);
-
-    m_pOsmDialog = NULL;
 
     return (WANTS_TOOLBAR_CALLBACK    |
           INSTALLS_TOOLBAR_TOOL     |
@@ -359,49 +361,119 @@ void osm_pi::DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool us
         }
     }
 }
+
 bool osm_pi::RenderOverlay(wxDC &dc, PlugIn_ViewPort *vp)
 {
     m_pdc = &dc;
+    if(m_bShowOsm)
+    {
+        double x1 = m_pastVp.lon_min;
+        double y1 = m_pastVp.lat_min;
+        double x2 = m_pastVp.lon_max;
+        double y2 = m_pastVp.lat_max;
+        // TODO: Query local database for seamarks
+        std::vector<Poi> seamarks;
+        m_pOsmDb->SelectNodes(x1,y1,x2,y2,seamarks);
+
+        for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
+            wxPoint pl;
+            double lat = (*it).latitude;
+            double lon = (*it).longitude;
+            GetCanvasPixLL(vp, &pl, lat, lon);
+            //wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
+            //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
+            
+            if(m_pdc && m_pdc->IsOk())
+            {     
+                m_pdc->SetPen(*wxBLACK_PEN);
+                m_pdc->SetBrush(*wxTRANSPARENT_BRUSH);
+            }
+
+            if(m_pdc && m_pdc->IsOk())
+            {
+                m_pdc->DrawCircle(pl.x, pl.y,10);
+                wxLogMessage (_T("OSM_PI: DrawCircle"));
+            }
+        }
+        return true;
+    }
+    else
+        return false;
+    
 //    if (!b_dbUsable || !m_bRenderOverlay)
 //       return false;
 
-    double x1 = m_pastVp.lon_min;
-    double y1 = m_pastVp.lat_min;
-    double x2 = m_pastVp.lon_max;
-    double y2 = m_pastVp.lat_max;
-    // TODO: Query local database for seamarks
-    std::vector<Poi> seamarks;
-    m_pOsmDb->SelectNodes(x1,y1,x2,y2,seamarks);
-
-    for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
-        wxPoint pl;
-        double lat = (*it).latitude;
-        double lon = (*it).longitude;
-        GetCanvasPixLL(vp, &pl, lat, lon);
-        //wxLogMessage (_T("OSM_PI: Vector %i @ latlon[%f,%f] xy[%i,%i]"),(*it).id,lat,lon,pl.x,pl.y);
-        //DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
-        
-        if(m_pdc && m_pdc->IsOk())
-        {     
-            m_pdc->SetPen(*wxBLACK_PEN);
-            m_pdc->SetBrush(*wxTRANSPARENT_BRUSH);
-        }
-
-        if(m_pdc && m_pdc->IsOk())
-        {
-            m_pdc->DrawCircle(pl.x, pl.y,10);
-            wxLogMessage (_T("OSM_PI: DrawCircle"));
-        }
-        
-    }
-
-    return true;
 }
 
 void osm_pi::OnToolbarToolCallback(int id)
 {
     wxLogMessage (_T("OSM_PI: OnToolbarToolCallback\n"));
-    /* OSM Dialog (here we can select what types of objects to show)
+    
+      // Qualify the GRIB dialog position
+            bool b_reset_pos = false;
+
+
+#ifdef __WXMSW__
+        //  Support MultiMonitor setups which an allow negative window positions.
+        //  If the requested window does not intersect any installed monitor,
+        //  then default to simple primary monitor positioning.
+            RECT frame_title_rect;
+            frame_title_rect.left =   m_osm_dialog_x;
+            frame_title_rect.top =    m_osm_dialog_y;
+            frame_title_rect.right =  m_osm_dialog_x + m_osm_dialog_sx;
+            frame_title_rect.bottom = m_osm_dialog_y + 30;
+
+
+            if(NULL == MonitorFromRect(&frame_title_rect, MONITOR_DEFAULTTONULL))
+                  b_reset_pos = true;
+#else
+       //    Make sure drag bar (title bar) of window on Client Area of screen, with a little slop...
+            wxRect window_title_rect;                    // conservative estimate
+            window_title_rect.x = m_osm_dialog_x;
+            window_title_rect.y = m_osm_dialog_y;
+            window_title_rect.width = m_osm_dialog_sx;
+            window_title_rect.height = 30;
+
+            wxRect ClientRect = wxGetClientDisplayRect();
+            ClientRect.Deflate(60, 60);      // Prevent the new window from being too close to the edge
+            if(!ClientRect.Intersects(window_title_rect))
+                  b_reset_pos = true;
+
+#endif
+
+            if(b_reset_pos)
+            {
+                  m_osm_dialog_x = 20;
+                  m_osm_dialog_y = 170;
+                  m_osm_dialog_sx = 300;
+                  m_osm_dialog_sy = 540;
+            }
+
+
+      // show the OSM dialog
+      if(NULL == m_pOsmDialog)
+      {
+            m_pOsmDialog = new OsmDlg(m_parent_window);
+            m_pOsmDialog->plugin = this;
+            //m_pOsmDialog->Create ( m_parent_window, this, -1, _("OSM Display Control"), m_grib_dir,
+            //                   wxPoint( m_osm_dialog_x, m_osm_dialog_y), wxSize( m_osm_dialog_sx, m_osm_dialog_sy));
+      }
+
+      //Toggle OSM overlay display
+      m_bShowOsm = !m_bShowOsm;
+
+      //    Toggle dialog?
+      m_pOsmDialog->Show(m_bShowOsm);
+
+      // Toggle is handled by the toolbar but we must keep plugin manager b_toggle updated
+      // to actual status to ensure correct status upon toolbar rebuild
+      SetToolbarItemState( m_leftclick_tool_id, m_bShowOsm );
+
+    
+    
+    
+/* OLD CODE    
+    // OSM Dialog (here we can select what types of objects to show)
     if(NULL == m_pOsmDialog)
     {
         m_pOsmDialog = new OsmDlg(m_parent_window);
@@ -409,11 +481,12 @@ void osm_pi::OnToolbarToolCallback(int id)
         m_pOsmDialog->Move(wxPoint(m_osm_dialog_x, m_osm_dialog_y));
     }
     m_pOsmDialog->Show(!m_pOsmDialog->IsShown());
-    */
+*/
+    //
     // TODO: this needs to show a dialog which allow the user
     // to update their local database by pressing a button? Maybe?
     //DownloadUrl(m_api_url);
-
+/*
     double x1 = m_pastVp.lon_min;
     double y1 = m_pastVp.lat_min;
     double x2 = m_pastVp.lon_max;
@@ -425,5 +498,6 @@ void osm_pi::OnToolbarToolCallback(int id)
         wxLogMessage (_T("OSM_PI: We have a file to play with...."));
         m_pOsmDb->ConsumeOsm(OsmDownloader::m_osm_path);
     }
+*/
 }
 
