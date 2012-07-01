@@ -79,9 +79,10 @@ private:
         Node            m_node;
         bool            m_visible;
     };
-    WX_DEFINE_ARRAY(Container *, ContainerArray);
+    //WX_DEFINE_ARRAY(, ContainerArray);
+    WX_DECLARE_HASH_MAP( int, Container*, wxIntegerHash, wxIntegerEqual, ContainerHash );
 
-    ContainerArray m_Objects;
+    ContainerHash m_Objects;
 
 };
 

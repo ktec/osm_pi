@@ -47,10 +47,13 @@ OsmOverlayFactory::OsmOverlayFactory()
 
 OsmOverlayFactory::~OsmOverlayFactory()
 {
-    for ( size_t i = m_Objects.GetCount(); i > 0; i-- )
+    // iterate over all the elements in the class
+    // m_Objects.clear();
+    ContainerHash::iterator it;
+    for( it = m_Objects.begin(); it != m_Objects.end(); ++it )
     {
-        Container *cont = m_Objects.Item( i-1 );
-        m_Objects.Remove( cont );
+        Container *cont = it->second;
+        m_Objects.erase (it->first);
         delete cont;
     }
 }
@@ -58,9 +61,11 @@ OsmOverlayFactory::~OsmOverlayFactory()
 bool OsmOverlayFactory::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
     wxLogMessage (_T("OSM_PI: OsmOverlayFactory::RenderOverlay"));
-    for ( size_t i = 0; i < m_Objects.GetCount(); i++ )
+    ContainerHash::iterator it;
+    for( it = m_Objects.begin(); it != m_Objects.end(); ++it )
     {
-        m_Objects.Item( i )->Render( dc, vp );
+        Container *cont = it->second;
+        cont->Render( dc, vp );
     }
     return true;
 }
@@ -68,9 +73,11 @@ bool OsmOverlayFactory::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 bool OsmOverlayFactory::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
 {
     wxLogMessage (_T("OSM_PI: OsmOverlayFactory::RenderGLOverlay"));
-    for ( size_t i = 0; i < m_Objects.GetCount(); i++ )
+    ContainerHash::iterator it;
+    for( it = m_Objects.begin(); it != m_Objects.end(); ++it )
     {
-        m_Objects.Item( i )->RenderGL( pcontext, vp );
+        Container *cont = it->second;
+        cont->RenderGL( pcontext, vp );
     }
     return true;
 }
@@ -84,34 +91,40 @@ bool OsmOverlayFactory::AddGroup( wxString group_name, bool visible )
 bool OsmOverlayFactory::AddNode( Node node, bool visible )
 {
     wxLogMessage (_T("OSM_PI: OsmOverlayFactory::AddNode %s"), node.seamark_type.c_str());
-    Container *cont = new Container( node, visible );
-    if ( cont->Setup() )
-    {
-        m_Objects.Add( cont );
-        RequestRefresh( GetOCPNCanvasWindow() );
-        return true;
+    // check if node doesn't exist exists
+    if (m_Objects.find( node.id ) == m_Objects.end()) {
+        Container *cont = new Container( node, visible );
+        if ( cont->Setup() )
+        {
+            m_Objects[node.id] = cont;
+            RequestRefresh( GetOCPNCanvasWindow() );
+            return true;
+        }
+        else
+        {
+            delete cont;
+            return false;
+        }
     }
-    else
-    {
-        delete cont;
-        return false;
-    }
+    return false;
 }
 
-void OsmOverlayFactory::SetVisibility( int idx, bool visible )
+void OsmOverlayFactory::SetVisibility( int id, bool visible )
 {
-    m_Objects.Item( idx )->SetVisibility( visible );
+    Container *cont = m_Objects[ id ];
+    cont->SetVisibility( visible );
     RequestRefresh( GetOCPNCanvasWindow() );
 }
 
-bool OsmOverlayFactory::GetVisibility( int idx )
+bool OsmOverlayFactory::GetVisibility( int id )
 {
-      return m_Objects.Item( idx )->GetVisibility();
+    Container *cont = m_Objects[ id ];
+    return cont->GetVisibility();
 }
 
 int OsmOverlayFactory::GetCount()
 {
-      return m_Objects.GetCount();
+    return m_Objects.size();
 }
 
 
@@ -204,9 +217,16 @@ bool OsmOverlayFactory::Container::DoRender()
     if ( !m_visible )
         return true;
 
+    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::Container::DoRender()"));
+
     wxPoint pt;
-    GetCanvasPixLL( m_pvp,  &pt, m_node.latitude, m_node.longitude );
-    DoDrawBitmap( *_img_osm, pt.x-16, pt.y-32, true );
+    GetCanvasPixLL( m_pvp,  &pt, m_node.longitude, m_node.latitude );
+
+
+    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::Container::DoRender(%f,%f)"), m_node.latitude, m_node.longitude);
+
+    //DoDrawBitmap( *_img_osm, pt.x-16, pt.y-32, true );
+    DoDrawBitmap( *_img_osm, pt.x-16, pt.y-16, true );
 
     return true;
 }

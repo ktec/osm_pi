@@ -101,10 +101,40 @@ void OsmOverlayUI::SetColorScheme( PI_ColorScheme cs )
 
 bool OsmOverlayUI::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
+/*
     // query db
-    m_pDatabase->SelectNodes()
+    if (vp.clat == m_pastVp.clat && vp.clon == m_pastVp.clon && vp.pix_height == m_pastVp.pix_height && vp.pix_width == m_pastVp.pix_width && vp.rotation == m_pastVp.rotation && vp.chart_scale == m_pastVp.chart_scale && 
+        vp.lat_max == m_pastVp.lat_max && vp.lat_min == m_pastVp.lat_min && vp.lon_max == m_pastVp.lon_max && vp.lon_min == m_pastVp.lon_min && vp.view_scale_ppm == m_pastVp.view_scale_ppm)
+    {
+        return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
+    }
+    m_pastVp = vp;
+    
+    if(m_bShowOsm)
+    {
+    }
+    else
+        return false;
+    
+//    if (!b_dbUsable || !m_bRenderOverlay)
+//       return false;
+*/
 
     m_pViewPort = *vp;
+    double x1 = m_pViewPort.lon_min;
+    double y1 = m_pViewPort.lat_min;
+    double x2 = m_pViewPort.lon_max;
+    double y2 = m_pViewPort.lat_max;
+
+    std::vector<Node> nodes;
+    m_pDatabase->SelectNodes(x1,y1,x2,y2,nodes);
+
+    for(std::vector<Node>::iterator it = nodes.begin(); it != nodes.end(); ++it) {
+        Node node = *it;
+        AddNode(node, true);
+    }
+
+
     return m_pFactory->RenderOverlay( dc, vp );
 }
 
@@ -163,6 +193,7 @@ void OsmOverlayUI::OnDownload( wxCommandEvent &event )
     {
         wxLogMessage (_T("OSM_PI: We have a file to play with...."));
         m_pDatabase->ConsumeOsm(OsmDownloader::m_osm_path);
+        RequestRefresh( GetOCPNCanvasWindow() );
     }
 }
 

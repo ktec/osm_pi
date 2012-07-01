@@ -66,6 +66,7 @@ private:
 
     wxCheckListBox       *m_pCheckListBox;
     wxBitmapButton       *m_pButtonDownload;
+    wxBitmapButton       *m_pButtonStart;
 
     OsmDatabase          *m_pDatabase;
     OsmOverlayFactory    *m_pFactory;
