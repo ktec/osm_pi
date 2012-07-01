@@ -35,6 +35,7 @@
 #endif //precompiled headers
 
 #include "factory.h"
+#include "db.h"
 #include "icons.h"
 
 //WX_DECLARE_STRING_HASH_MAP( wxString, SeamarkTypesHashMap );
@@ -42,7 +43,11 @@
 
 const wxColor OsmOverlayDefaultColor( 144, 144, 144 );
 
-OsmOverlayFactory::OsmOverlayFactory()
+OsmOverlayFactory::Container::Container( wxString seamark_type, bool visible )
+     : m_ready( false ), m_seamark_type( seamark_type ), m_visible( visible )
+
+OsmOverlayFactory::OsmOverlayFactory( OsmDatabase *database )
+    : m_pOsmDatabase(database)
 {
 }
 
@@ -64,6 +69,18 @@ bool OsmOverlayFactory::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
     // m_seamark_type - GetMarkType()
     // std::vector<Poi> &features
     // int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features)
+
+/*
+    // TODO: Query local database for seamarks
+    std::vector<Poi> seamarks;
+    m_pOsmDatabase->SelectNodes(x1,y1,x2,y2,seamarks);
+
+    for(std::vector<Poi>::iterator it = seamarks.begin(); it != seamarks.end(); ++it) {
+        wxPoint pl;
+        GetCanvasPixLL(vp, &pl, (*it).longitude, (*it).latitude);
+        DoDrawBitmap( *_img_osm, pl.x, pl.y, false );
+    }
+*/
 
     for ( size_t i = 0; i < m_Objects.GetCount(); i++ )
     {

@@ -72,8 +72,8 @@ OsmOverlayUI::OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename 
       SetMinSize(sz);
 
       UpdateButtonsState();
-      m_pFactory = new OsmOverlayFactory();
       m_pDatabase = new OsmDatabase();
+      m_pFactory = new OsmOverlayFactory(m_pDatabase);
       m_pDownloader = new OsmDownloader();
 }
 
