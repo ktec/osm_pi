@@ -51,7 +51,8 @@ public:
     bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
     bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
 
-    void AddSeamarkType( wxString seamark_type, bool visible );
+    void AddGroup( wxString group_name, bool visible );
+    void AddNode( Node node, bool visible );
     wxString GetSeamarkType( int idx );
     bool GetVisibility( int idx );
     int GetCount();
@@ -60,6 +61,7 @@ private:
     void OnListItemSelected( wxCommandEvent& event );
     void OnCheckToggle( wxCommandEvent& event );
     void OnDownload( wxCommandEvent& event );
+    void OnStart( wxCommandEvent& event );
     void UpdateButtonsState();
 
     wxCheckListBox       *m_pCheckListBox;

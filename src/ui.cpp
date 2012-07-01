@@ -35,8 +35,9 @@
 #include <wx/filename.h>
 #include "icons.h"
 #include "ui.h"
+#include "osm.h"
 
-/*    KMLOverlay user interface implementation
+/*    OsmOverlay user interface implementation
  *
  *************************************************************************/
 
@@ -66,6 +67,13 @@ OsmOverlayUI::OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename 
       m_pButtonDownload->Connect( wxEVT_COMMAND_BUTTON_CLICKED,
             wxCommandEventHandler( OsmOverlayUI::OnDownload ), NULL, this );
 
+      m_pButtonStart = new wxBitmapButton( this, wxID_ANY, *_img_start, wxDefaultPosition, wxDefaultSize );
+      itemBoxSizer01->Add( m_pButtonStart, 0, wxALIGN_CENTER, 2 );
+      m_pButtonStart->Connect( wxEVT_COMMAND_BUTTON_CLICKED,
+            wxCommandEventHandler( OsmOverlayUI::OnStart ), NULL, this );
+
+
+
       Fit();
       // GetSize() doesn't seems to count aui borders so we add it now.
       wxSize sz = GetSize(); sz.IncBy(10,24);
@@ -73,7 +81,7 @@ OsmOverlayUI::OsmOverlayUI( wxWindow *pparent, wxWindowID id, wxString filename 
 
       UpdateButtonsState();
       m_pDatabase = new OsmDatabase();
-      m_pFactory = new OsmOverlayFactory(m_pDatabase);
+      m_pFactory = new OsmOverlayFactory();
       m_pDownloader = new OsmDownloader();
 }
 
@@ -93,6 +101,9 @@ void OsmOverlayUI::SetColorScheme( PI_ColorScheme cs )
 
 bool OsmOverlayUI::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
+    // query db
+    m_pDatabase->SelectNodes()
+
     m_pViewPort = *vp;
     return m_pFactory->RenderOverlay( dc, vp );
 }
@@ -103,13 +114,20 @@ bool OsmOverlayUI::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
     return m_pFactory->RenderGLOverlay( pcontext, vp );
 }
 
-void OsmOverlayUI::AddSeamarkType( wxString seamark_type, bool visible )
+void OsmOverlayUI::AddGroup( wxString group_name, bool visible )
 {
-    if (! m_pFactory->Add( seamark_type, visible )) {
+    if (! m_pFactory->AddGroup( group_name, visible )) {
         return;
     }
-    m_pCheckListBox->Append( seamark_type );
+    m_pCheckListBox->Append( group_name );
     m_pCheckListBox->Check( m_pCheckListBox->GetCount()-1, visible );
+}
+
+void OsmOverlayUI::AddNode( Node node, bool visible )
+{
+    if (! m_pFactory->AddNode( node, visible )) {
+        return;
+    }
 }
 
 bool OsmOverlayUI::GetVisibility( int idx )
@@ -147,4 +165,11 @@ void OsmOverlayUI::OnDownload( wxCommandEvent &event )
         m_pDatabase->ConsumeOsm(OsmDownloader::m_osm_path);
     }
 }
+
+void OsmOverlayUI::OnStart( wxCommandEvent &event )
+{
+    wxLogMessage (_T("OSM_PI: OnStart"));
+}
+
+
 

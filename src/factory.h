@@ -37,50 +37,51 @@
 
 #include "../../../include/ocpn_plugin.h"
 
+#include "osm.h"
+
 class OsmOverlayFactory
 {
 public:
-      OsmOverlayFactory();
-      ~OsmOverlayFactory();
+    OsmOverlayFactory();
+    ~OsmOverlayFactory();
 
-      bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
-      bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
-      void SetCurrentViewPort( PlugIn_ViewPort &vp );
+    bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
+    bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
+    void SetCurrentViewPort( PlugIn_ViewPort &vp );
 
-      void SetVisibility( int idx, bool visible );
-      bool GetVisibility( int idx );
-      
-      bool Add( wxString seamark_type, bool visible );
-      wxString GetSeamarkType( int idx );
-      int GetCount();
-      
+    void SetVisibility( int idx, bool visible );
+    bool GetVisibility( int idx );
+
+    bool AddGroup( wxString group_name, bool visible );
+    bool AddNode( Node node, bool visible );
+    wxString GetSeamarkType( int idx );
+    int GetCount();
 
 private:
-      class Container
-      {
-      public:
-            Container(wxString seamark_type, bool visible);
-            bool Setup();
-            bool Render( wxDC &dc, PlugIn_ViewPort *vp );
-            bool RenderGL( wxGLContext *pcontext, PlugIn_ViewPort *vp );
-            void SetVisibility( bool visible );
-            wxString GetMarkType();
-            bool GetVisibility();
+    class Container
+    {
+    public:
+        Container(Node node, bool visible);
+        bool Setup();
+        bool Render( wxDC &dc, PlugIn_ViewPort *vp );
+        bool RenderGL( wxGLContext *pcontext, PlugIn_ViewPort *vp );
+        void SetVisibility( bool visible );
+        wxString GetMarkType();
+        bool GetVisibility();
 
-      private:
-            void DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
-            bool DoRender();
-            wxDC            *m_pdc;
-            wxGLContext     *m_pcontext;
-            PlugIn_ViewPort *m_pvp;
-            bool       m_ready;
-            wxString   m_seamark_type;
-            bool       m_visible;
+    private:
+        void DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
+        bool DoRender();
+        wxDC            *m_pdc;
+        wxGLContext     *m_pcontext;
+        PlugIn_ViewPort *m_pvp;
+        bool            m_ready;
+        Node            m_node;
+        bool            m_visible;
+    };
+    WX_DEFINE_ARRAY(Container *, ContainerArray);
 
-      };
-      WX_DEFINE_ARRAY(Container *, ContainerArray);
-
-      ContainerArray m_Objects;
+    ContainerArray m_Objects;
 
 };
 

@@ -183,7 +183,7 @@ bool osm_pi::LoadConfig(void)
         {
             wxString seamark_type = wxString::FromAscii(*np++);
             pConf->Read( seamark_type, &visible, _T("Y") );
-            m_puserinput->AddSeamarkType( seamark_type, (visible==_T("Y")) );
+            m_puserinput->AddGroup( seamark_type, (visible==_T("Y")) );
         }
         return true;
     }

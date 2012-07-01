@@ -27,11 +27,12 @@
  */
 
 #include "db.h"
-
+#include "osm.h"
 
 static void profile(void *context, const char *sql, sqlite3_uint64 ns) {
-fprintf(stderr, "Query: %s\n", sql);
-fprintf(stderr, "Execution Time: %llu ms\n", ns / 1000000);}
+    wxLogMessage (_T("OSM_PI: Query: %s"), sql);
+    wxLogMessage (_T("OSM_PI: Execution Time: %llu ms"), ns / 1000000);
+}
 
 void appendOSDirSlash(wxString* pString)
 {
@@ -115,10 +116,10 @@ OsmDatabase::OsmDatabase()
 OsmDatabase::~OsmDatabase()
 {
     // destructor
-/* finalizing SQL prepared statements */
+    // finalizing SQL prepared statements
     FinalizeSqlStatements (&m_params);
     
-/* closing the DB connection */
+    // closing the DB connection
     if (m_database)
         sqlite3_close (m_database);
     spatialite_cleanup();
@@ -196,7 +197,7 @@ int OsmDatabase::ConsumeRelation (const void *user_data, const readosm_relation 
     return READOSM_OK;
 }
 
-int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features)
+int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Node> &nodes)
 {
     wxLogMessage (_T("OSM_PI: SelectNodes %f,%f,%f,%f"),(float)lat,(float)lon,(float)lat_max,(float)lon_max);
     if (!b_dbUsable)
@@ -216,24 +217,18 @@ int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon
     int ret = sqlite3_step (m_params.select_nodes_stmt);
 
     int count = 0;
-    //vector<Poi> features(1);
-
     while (ret == SQLITE_ROW) {
-	    const long long id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
-	    const double latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
-	    const double longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
-        Poi poi;
-        poi.id = id;
-        poi.latitude = latitude;
-        poi.longitude = longitude;
-	    features.push_back(poi);
-        wxLogMessage (_T("OSM_PI: sqlite3_step() row: %lli, %f, %f"), id, latitude, longitude);
+        Node node;
+        node.id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
+        node.latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
+        node.longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
+	    nodes.push_back(node);
         count++;
         ret = sqlite3_step (m_params.select_nodes_stmt);
     }
 
     if (ret == SQLITE_DONE)
-        wxLogMessage (_T("OSM_PI: select nodes complete"));
+       ; // wxLogMessage (_T("OSM_PI: select nodes complete"));
     else
     {
         wxLogMessage (_T("OSM_PI: sqlite3_step() error: SELECT osm_nodes"));

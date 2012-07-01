@@ -47,6 +47,8 @@
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite/gaiageo.h"
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
 
+#include "osm.h"
+
 #define DATABASE_NAME "osm.sqlite"
 #define PROJECTION 3395
 #define SPATIAL_REFERENCE_ID 4326 // WGS 84
@@ -74,13 +76,6 @@ struct aux_params
     int wr_rel_refs;
 };
 
-struct Poi
-{
-    long long id;
-	double latitude;
-	double longitude;
-};
-
 class OsmDatabase
 {
 public:
@@ -90,7 +85,7 @@ public:
     // ReadOSM stuff
     struct aux_params m_params;
     void ConsumeOsm(const char *osm_path);
-    int SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Poi> &features);
+    int SelectNodes (double lat, double lon, double lat_max, double lon_max, std::vector<Node> &nodes);
 
 private:
     static int ConsumeNode (const void *user_data, const readosm_node * node);
