@@ -49,8 +49,38 @@ public:
 
       void SetVisibility( int idx, bool visible );
       bool GetVisibility( int idx );
+      
+      bool Add( wxString seamark_type, bool visible );
+      wxString GetSeamarkType( int idx );
+      int GetCount();
+      
 
 private:
+      class Container
+      {
+      public:
+            Container(wxString seamark_type, bool visible);
+            bool Setup();
+            bool Render( wxDC &dc, PlugIn_ViewPort *vp );
+            bool RenderGL( wxGLContext *pcontext, PlugIn_ViewPort *vp );
+            void SetVisibility( bool visible );
+            wxString GetMarkType();
+            bool GetVisibility();
+
+      private:
+            void DoDrawBitmap( const wxBitmap &bitmap, wxCoord x, wxCoord y, bool usemask );
+            bool DoRender();
+            wxDC            *m_pdc;
+            wxGLContext     *m_pcontext;
+            PlugIn_ViewPort *m_pvp;
+            bool       m_ready;
+            wxString   m_seamark_type;
+            bool       m_visible;
+
+      };
+      WX_DEFINE_ARRAY(Container *, ContainerArray);
+
+      ContainerArray m_Objects;
 
 };
 

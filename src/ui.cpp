@@ -103,6 +103,15 @@ bool OsmOverlayUI::RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp )
     return m_pFactory->RenderGLOverlay( pcontext, vp );
 }
 
+void OsmOverlayUI::AddSeamarkType( wxString seamark_type, bool visible )
+{
+    if (! m_pFactory->Add( seamark_type, visible )) {
+        return;
+    }
+    m_pCheckListBox->Append( seamark_type );
+    m_pCheckListBox->Check( m_pCheckListBox->GetCount()-1, visible );
+}
+
 bool OsmOverlayUI::GetVisibility( int idx )
 {
       return m_pFactory->GetVisibility( idx ); // m_pCheckListBox->IsChecked( idx );

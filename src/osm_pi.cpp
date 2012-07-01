@@ -26,27 +26,6 @@
  ***************************************************************************
  */
 
-    /*
-    //[seamark:type=
-    anchorage|anchor_berth|berth|building|
-    beacon_cardinal|beacon_isolated_danger|beacon_lateral|beacon_safe_water|beacon_special_purpose|
-    buoy_cardinal|buoy_installation|buoy_isolated_danger|buoy_lateral|buoy_safe_water|buoy_special_purpose|
-    cable_area|cable_submarine|causway|coastguard_station|
-    daymark|fog_signal|
-    gate|harbour|landmark|
-    light|light_major|light_minor|light_float|light_vessel|
-    lock_basin|
-    mooring|navigation_line|notice|
-    pile|
-    pilot_boarding|
-    platform|production_area|
-    radar_reflector|radar_transponder|radar_station|radio_station|
-    recommended_track|rescue_station|restricted_area|sandwaves|seabed_area|
-    separation_boundary|separation_crossing|separation_lane|separation_line|separation_roundabout|separation_zone|
-    shoreline_construction|signal_station_traffic|signal_station_warning|small_craft_facility|topmark|wreck]
-    */
-
-
 #include "osm_pi.h"
 #include "icons.h"
 #include "prefdlg.h"
@@ -81,6 +60,8 @@ osm_pi::osm_pi(void *ppimgr)
 //
 //---------------------------------------------------------------------------------------------------------
 
+const char* osm_pi::SeamarkTypes[] = { "anchorage","anchor_berth","berth","building","beacon_cardinal","beacon_isolated_danger","beacon_lateral","beacon_safe_water","beacon_special_purpose","buoy_cardinal","buoy_installation","buoy_isolated_danger","buoy_lateral","buoy_safe_water","buoy_special_purpose","cable_area","cable_submarine","causway","coastguard_station","daymark","fog_signal","gate","harbour","landmark","light","light_major","light_minor","light_float","light_vessel","lock_basin","mooring","navigation_line","notice","pile","pilot_boarding","platform","production_area","radar_reflector","radar_transponder","radar_station","radio_station","recommended_track","rescue_station","restricted_area","sandwaves","seabed_area","separation_boundary","separation_crossing","separation_lane","separation_line","separation_roundabout","separation_zone","shoreline_construction","signal_station_traffic","signal_station_warning","small_craft_facility","topmark","wreck",NULL };
+
 int osm_pi::Init(void)
 {
     AddLocaleCatalog( _T("opencpn-osm_pi") );
@@ -96,7 +77,7 @@ int osm_pi::Init(void)
     wxAuiPaneInfo pane = wxAuiPaneInfo().Name(_T("OsmOverlay")).Caption(_("OSM overlay")).CaptionVisible(true).Float().FloatingPosition(50,150).Dockable(false).Resizable().CloseButton(true).Show(false);
     m_pauimgr->AddPane( m_puserinput, pane );
     m_pauimgr->Update();
-        
+
     //    Get a pointer to the opencpn configuration object
     m_pconfig = GetOCPNConfigObject();
     //    And load the configuration items
@@ -195,6 +176,15 @@ bool osm_pi::LoadConfig(void)
     {
         pConf->SetPath ( _T( "/Settings/Osm" ) );
         //pConf->Read ( _T ( "Api Url" ),  &m_sApi_url, API_URL );
+
+        wxString visible;
+        const char **np = osm_pi::SeamarkTypes;
+        while (*np) 
+        {
+            wxString seamark_type = wxString::FromAscii(*np++);
+            pConf->Read( seamark_type, &visible, _T("Y") );
+            m_puserinput->AddSeamarkType( seamark_type, (visible==_T("Y")) );
+        }
         return true;
     }
     else
@@ -209,7 +199,13 @@ bool osm_pi::SaveConfig(void)
     {
         pConf->SetPath ( _T ( "/Settings/Osm" ) );
         //pConf->Write ( _T ( "Api Url" ), m_sApi_url );
-
+        const char **np = osm_pi::SeamarkTypes;
+        int i = 0;
+        while (*np) 
+        {
+            wxString seamark_type = wxString::FromAscii(*np++);
+            pConf->Write( seamark_type, (m_puserinput->GetVisibility( i++ )?_T("Y"):_T("N")) );
+        }
         return true;
     }
     else

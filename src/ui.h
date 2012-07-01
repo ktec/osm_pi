@@ -51,6 +51,8 @@ public:
     bool RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp );
     bool RenderGLOverlay( wxGLContext *pcontext, PlugIn_ViewPort *vp );
 
+    void AddSeamarkType( wxString seamark_type, bool visible );
+    wxString GetSeamarkType( int idx );
     bool GetVisibility( int idx );
     int GetCount();
 

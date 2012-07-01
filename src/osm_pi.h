@@ -51,6 +51,7 @@
 #define OSM_TOOL_POSITION -1  // Request default positioning of toolbar tool
 //WX_DECLARE_STRING_HASH_MAP( wxString, TagList );
 //WX_DEFINE_ARRAY(double, NodeRefList);
+//WX_DECLARE_STRING_HASH_MAP( wxString, SeamarkType );
 
 //----------------------------------------------------------------------------------------------------------
 //    The PlugIn Class Definition
@@ -94,6 +95,7 @@ private:
     wxAuiManager    *m_pauimgr;
     int              m_toolbar_item_id;
     OsmOverlayUI    *m_puserinput;
+    static const char* SeamarkTypes[];
 
 };
 
