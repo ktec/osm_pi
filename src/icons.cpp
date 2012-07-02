@@ -4,7 +4,7 @@
 #	include <wx/wx.h>
 #endif
 #include <wx/mstream.h>
-#include "icons.h"
+#include "../include/icons.h"
 
 wxBitmap *_img_Anchorage;
 wxBitmap *_img_Anchor_Berth;

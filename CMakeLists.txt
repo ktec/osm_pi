@@ -72,6 +72,7 @@ SET(SRC_OSM
     src/factory.cpp
     src/icons.cpp
     src/ui.cpp
+    include/osm.hpp
     include/osm_pi.h
     include/prefdlg.h
     include/downloader.h

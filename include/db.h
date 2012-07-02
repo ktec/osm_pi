@@ -47,7 +47,7 @@
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite/gaiageo.h"
 #include "libspatialite-amalgamation-3.0.1/headers/spatialite.h"
 
-#include "osm.h"
+#include "osm.hpp"
 
 #define DATABASE_NAME "osm.sqlite"
 #define PROJECTION 3395

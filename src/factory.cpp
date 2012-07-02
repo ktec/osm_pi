@@ -36,7 +36,7 @@
 
 #include "../include/factory.h"
 #include "../include/icons.h"
-#include "../include/osm.h"
+#include "../include/osm.hpp"
 
 
 const wxColor OsmOverlayDefaultColor( 144, 144, 144 );
@@ -90,7 +90,7 @@ bool OsmOverlayFactory::AddGroup( wxString group_name, bool visible )
 
 bool OsmOverlayFactory::AddNode( Node node, bool visible )
 {
-    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::AddNode %s"), node.seamark_type.c_str());
+    wxLogMessage (_T("OSM_PI: OsmOverlayFactory::AddNode %i"), node.seamark_type);
     // check if node doesn't exist exists
     if (m_Objects.find( node.id ) == m_Objects.end()) {
         Container *cont = new Container( node, visible );
@@ -273,9 +273,9 @@ void OsmOverlayFactory::Container::SetVisibility( bool visible )
       m_visible = visible;
 }
 
-wxString OsmOverlayFactory::Container::GetMarkType()
+enum SeamarkType OsmOverlayFactory::Container::GetMarkType()
 {
-      return m_node.seamark_type;
+      return SeamarkType(m_node.seamark_type);
 }
 
 bool OsmOverlayFactory::Container::GetVisibility()

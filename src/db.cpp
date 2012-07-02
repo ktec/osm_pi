@@ -27,7 +27,7 @@
  */
 
 #include "../include/db.h"
-#include "../include/osm.h"
+#include "../include/osm.hpp"
 
 static void profile(void *context, const char *sql, sqlite3_uint64 ns) {
     wxLogMessage (_T("OSM_PI: Query: %s"), sql);
@@ -220,7 +220,7 @@ int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon
     while (ret == SQLITE_ROW) {
         Node node;
         node.id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
-        node.seamark_type = SeamarkTypes.find(sqlite3_column_text(m_params.select_nodes_stmt, 1))->second;
+        node.seamark_type = 1; //SeamarkTypes->find(sqlite3_column_text(m_params.select_nodes_stmt, 1))->second;
         node.latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
         node.longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
 	    nodes.push_back(node);

@@ -35,7 +35,7 @@
 #include <wx/filename.h>
 #include "../include/icons.h"
 #include "../include/ui.h"
-#include "../include/osm.h"
+#include "../include/osm.hpp"
 
 /*    OsmOverlay user interface implementation
  *

@@ -37,7 +37,7 @@
 
 #include "../../../include/ocpn_plugin.h"
 
-#include "osm.h"
+#include "osm.hpp"
 
 class OsmOverlayFactory
 {
@@ -54,7 +54,7 @@ public:
 
     bool AddGroup( wxString group_name, bool visible );
     bool AddNode( Node node, bool visible );
-    wxString GetSeamarkType( int idx );
+    enum SeamarkType GetSeamarkType( int idx );
     int GetCount();
 
 private:
@@ -66,7 +66,7 @@ private:
         bool Render( wxDC &dc, PlugIn_ViewPort *vp );
         bool RenderGL( wxGLContext *pcontext, PlugIn_ViewPort *vp );
         void SetVisibility( bool visible );
-        wxString GetMarkType();
+        enum SeamarkType GetMarkType();
         bool GetVisibility();
 
     private:
