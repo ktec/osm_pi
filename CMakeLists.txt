@@ -72,6 +72,7 @@ SET(SRC_OSM
     src/factory.cpp
     src/icons.cpp
     src/ui.cpp
+    src/seamarks.cpp
     include/osm_pi.h
     include/prefdlg.h
     include/downloader.h
@@ -79,6 +80,7 @@ SET(SRC_OSM
     include/factory.h
     include/icons.h
     include/ui.h
+    include/seamarks.h
     include/libspatialite-amalgamation-3.0.1/spatialite.c
     include/libspatialite-amalgamation-3.0.1/sqlite3.c
     include/readosm/readosm.c
