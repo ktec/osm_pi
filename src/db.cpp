@@ -220,7 +220,7 @@ int OsmDatabase::SelectNodes (double lat, double lon, double lat_max, double lon
     while (ret == SQLITE_ROW) {
         Node node;
         node.id = sqlite3_column_int64(m_params.select_nodes_stmt, 0);
-        node.seamark_type = _T("anchorage");
+        node.seamark_type = SeamarkTypes.find(sqlite3_column_text(m_params.select_nodes_stmt, 1))->second;
         node.latitude = sqlite3_column_double(m_params.select_nodes_stmt, 2);
         node.longitude = sqlite3_column_double(m_params.select_nodes_stmt, 3);
 	    nodes.push_back(node);

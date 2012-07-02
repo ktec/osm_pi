@@ -225,8 +225,29 @@ bool OsmOverlayFactory::Container::DoRender()
 
     wxLogMessage (_T("OSM_PI: OsmOverlayFactory::Container::DoRender(%f,%f)"), m_node.latitude, m_node.longitude);
 
-    //DoDrawBitmap( *_img_osm, pt.x-16, pt.y-32, true );
-    DoDrawBitmap( *_img_osm, pt.x-16, pt.y-16, true );
+    switch(m_node.seamark_type)
+    {
+        case BUOY_CARDINAL:
+            DoDrawBitmap( *_img_Pillar_Black_Yellow_Black, pt.x-16, pt.y-16, true );
+        break;
+        case BEACON_CARDINAL:
+            DoDrawBitmap( *_img_Beacon_Black_Yellow_Black, pt.x-16, pt.y-16, true );
+        break;
+        case BUOY_SAFE_WATER:
+            DoDrawBitmap( *_img_Pillar_Red_White, pt.x-16, pt.y-16, true );
+        break;
+        case BUOY_LATERAL:
+            DoDrawBitmap( *_img_osm, pt.x-16, pt.y-16, true );
+        break;
+        case LIGHT_MAJOR:
+            DoDrawBitmap( *_img_Light_Major, pt.x-16, pt.y-16, true );
+        break;
+        case LIGHT_MINOR:
+            DoDrawBitmap( *_img_Light_Minor, pt.x-16, pt.y-16, true );
+        break;
+        default:
+            DoDrawBitmap( *_img_osm, pt.x-16, pt.y-16, true );
+    }
 
     return true;
 }
