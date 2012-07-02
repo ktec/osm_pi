@@ -34,9 +34,9 @@
   #include <wx/wx.h>
 #endif //precompiled headers
 
-#include "factory.h"
-#include "icons.h"
-#include "osm.h"
+#include "../include/factory.h"
+#include "../include/icons.h"
+#include "../include/osm.h"
 
 
 const wxColor OsmOverlayDefaultColor( 144, 144, 144 );

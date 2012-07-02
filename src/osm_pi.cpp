@@ -26,9 +26,9 @@
  ***************************************************************************
  */
 
-#include "osm_pi.h"
-#include "icons.h"
-#include "prefdlg.h"
+#include "../include/osm_pi.h"
+#include "../include/icons.h"
+#include "../include/prefdlg.h"
 
 // the class factories, used to create and destroy instances of the PlugIn
 extern "C" DECL_EXP opencpn_plugin* create_pi(void *ppimgr)

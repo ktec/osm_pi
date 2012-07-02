@@ -65,26 +65,26 @@ FIND_PACKAGE(Gettext REQUIRED)
 # header files and cpp/c files and CMake will sort them out
 
 SET(SRC_OSM
-    src/osm_pi.h
     src/osm_pi.cpp
-    src/prefdlg.h
     src/prefdlg.cpp
-    src/downloader.h
     src/downloader.cpp
-    src/db.h
     src/db.cpp
-    src/factory.h
     src/factory.cpp
-    src/icons.h
     src/icons.cpp
-    src/ui.h
     src/ui.cpp
-    src/libspatialite-amalgamation-3.0.1/spatialite.c
-    src/libspatialite-amalgamation-3.0.1/sqlite3.c
-    src/readosm/readosm.c
-    src/readosm/osmxml.c
-    src/readosm/osm_objects.c
-    src/readosm/protobuf.c
+    include/osm_pi.h
+    include/prefdlg.h
+    include/downloader.h
+    include/db.h
+    include/factory.h
+    include/icons.h
+    include/ui.h
+    include/libspatialite-amalgamation-3.0.1/spatialite.c
+    include/libspatialite-amalgamation-3.0.1/sqlite3.c
+    include/readosm/readosm.c
+    include/readosm/osmxml.c
+    include/readosm/osm_objects.c
+    include/readosm/protobuf.c
 	)
 
 ADD_LIBRARY(${PACKAGE_NAME} SHARED ${SRC_OSM})

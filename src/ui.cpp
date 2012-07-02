@@ -33,9 +33,9 @@
 #endif //precompiled headers
 
 #include <wx/filename.h>
-#include "icons.h"
-#include "ui.h"
-#include "osm.h"
+#include "../include/icons.h"
+#include "../include/ui.h"
+#include "../include/osm.h"
 
 /*    OsmOverlay user interface implementation
  *
@@ -102,20 +102,12 @@ void OsmOverlayUI::SetColorScheme( PI_ColorScheme cs )
 bool OsmOverlayUI::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
 {
 /*
-    // query db
-    if (vp.clat == m_pastVp.clat && vp.clon == m_pastVp.clon && vp.pix_height == m_pastVp.pix_height && vp.pix_width == m_pastVp.pix_width && vp.rotation == m_pastVp.rotation && vp.chart_scale == m_pastVp.chart_scale && 
-        vp.lat_max == m_pastVp.lat_max && vp.lat_min == m_pastVp.lat_min && vp.lon_max == m_pastVp.lon_max && vp.lon_min == m_pastVp.lon_min && vp.view_scale_ppm == m_pastVp.view_scale_ppm)
+    if (vp.clat == m_pViewPort.clat && vp.clon == m_pViewPort.clon && vp.pix_height == m_pViewPort.pix_height && vp.pix_width == m_pViewPort.pix_width && vp.rotation == m_pViewPort.rotation && vp.chart_scale == m_pViewPort.chart_scale && 
+        vp.lat_max == m_pViewPort.lat_max && vp.lat_min == m_pViewPort.lat_min && vp.lon_max == m_pViewPort.lon_max && vp.lon_min == m_pViewPort.lon_min && vp.view_scale_ppm == m_pViewPort.view_scale_ppm)
     {
         return; //Prevents event storm killing the responsiveness. At least in course-up it looks needed.
     }
-    m_pastVp = vp;
-    
-    if(m_bShowOsm)
-    {
-    }
-    else
-        return false;
-    
+    m_pViewPort = vp;
 //    if (!b_dbUsable || !m_bRenderOverlay)
 //       return false;
 */
@@ -133,7 +125,6 @@ bool OsmOverlayUI::RenderOverlay( wxDC &dc, PlugIn_ViewPort *vp )
         Node node = *it;
         AddNode(node, true);
     }
-
 
     return m_pFactory->RenderOverlay( dc, vp );
 }

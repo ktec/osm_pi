@@ -26,8 +26,8 @@
  ***************************************************************************
  */
 
-#include "db.h"
-#include "osm.h"
+#include "../include/db.h"
+#include "../include/osm.h"
 
 static void profile(void *context, const char *sql, sqlite3_uint64 ns) {
     wxLogMessage (_T("OSM_PI: Query: %s"), sql);

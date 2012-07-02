@@ -32,7 +32,7 @@
   #include <wx/wx.h>
 #endif //precompiled headers
 
-#include "prefdlg.h"
+#include "../include/prefdlg.h"
 
 OsmOverlayPreferencesDialog::OsmOverlayPreferencesDialog( wxWindow *parent, wxWindowID id )
       :wxDialog( parent, id, _("OSM overlay preferences"), wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE )
